@@ -309,10 +309,7 @@ struct Game
 	bool running = true;
 };
 
-// Players Levels and Tiles
-glm::vec2 playerPosition = { windowWidth / 2.0f , windowHeight * 1.0/ 10.0f };
-glm::vec2 playerDimensions = { 100.0f, 20.0f };
-glm::vec4 playerColor = { 1.0, 0.0, 0.0, 1.0 };
+
 
 float ballSpeedScale = 0.3f;
 glm::vec2 ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
@@ -466,69 +463,30 @@ int main(int argc, char** args)
 	glm::mat4 model(1.0f);
 	std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, BlockCols);
 
+	uint64_t LAST = SDL_GetPerformanceCounter();
 	while (running)
 	{
-		double deltaTime = 0;
-		Uint64 NOW = SDL_GetPerformanceCounter();
-		Uint64 LAST = 0;
+		uint64_t NOW = SDL_GetPerformanceCounter();
+		double deltaTime = (double)((NOW - LAST) * 1000 / (double)SDL_GetPerformanceFrequency());
 		LAST = NOW;
 
 
-		//////////////////// DRAW PHASE /////////////////////////////////
-		// 
-		// Draw Ball
-
-		objectData ball =
-		{
-			ballPosition,
-			{20.0f, 20.0f},
-		};
-		ball.color = ballColor;
-
-		DrawQuad(ball.dimension, ballPosition, ball.color, Vao, modelLoc, colorLoc);
-
-		
-		// Draw Player
-
-		DrawQuad(playerDimensions, playerPosition, playerColor, Vao, modelLoc, colorLoc);
-
-		// Draw Blocks
-		float blockWidth = (float)windowWidth / (float) BlockCols;
-		float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
-		for (int rowIdx = 0; rowIdx < BlockRows; ++rowIdx)
-		{
-			for (int colIdx = 0; colIdx < BlockCols; ++colIdx)
-			{
-				glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
-				unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
-
-				glm::vec4 ColorSelected = Colors[TileType];
-
-				DrawQuad({ blockWidth, blockHeight }, blockPos, ColorSelected, Vao, modelLoc, colorLoc);
-			}
-		}
-
-		SDL_GL_SwapWindow(Window);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// DeltaTime ticks
-		NOW = SDL_GetPerformanceCounter();
-		deltaTime = (double)((NOW - LAST) * 1000 / (double)SDL_GetPerformanceFrequency());
-
 		/////////////////////////// GAME UPDATE //////////////////////////////////////////
-		
+
 		running = UpdateInputState(inputState);
 		UpdatePlayerPosition(&playerPosition, inputState, (float)deltaTime);
-		
+
 		// Update ball velocity
 		ballPosition += ballVelocity * (float)deltaTime;
 
+		float blockWidth = (float)windowWidth / (float)BlockCols;
+		float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
 		// Ball-Brick collision detection
 		for (int i = 0; i < levelBricks.size(); ++i)
 		{
 			if (*((int*)(gameLevel)+i) != 0)
 			{
-				Collision collision = CheckCollision(ballPosition, ballDimensions, levelBricks[i], {blockWidth, blockHeight});
+				Collision collision = CheckCollision(ballPosition, ballDimensions, levelBricks[i], { blockWidth, blockHeight });
 				if (std::get<0>(collision))
 				{
 					UpdateBallOnCollision(ballVelocity, ballPosition, ballDimensions, collision);
@@ -562,6 +520,45 @@ int main(int argc, char** args)
 		// ball paddle collision detection
 		Collision collision = CheckCollision(ballPosition, ballDimensions, playerPosition, playerDimensions);
 		UpdateBallOnCollision(ballVelocity, ballPosition, ballDimensions, collision);
+
+
+		//////////////////// DRAW PHASE /////////////////////////////////
+		// 
+		// Draw Ball
+
+		objectData ball =
+		{
+			ballPosition,
+			{20.0f, 20.0f},
+		};
+		ball.color = ballColor;
+
+		DrawQuad(ball.dimension, ballPosition, ball.color, Vao, modelLoc, colorLoc);
+
+		
+		// Draw Player
+
+		DrawQuad(playerDimensions, playerPosition, playerColor, Vao, modelLoc, colorLoc);
+
+		// Draw Blocks
+
+		for (int rowIdx = 0; rowIdx < BlockRows; ++rowIdx)
+		{
+			for (int colIdx = 0; colIdx < BlockCols; ++colIdx)
+			{
+				glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
+				unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
+
+				glm::vec4 ColorSelected = Colors[TileType];
+
+				DrawQuad({ blockWidth, blockHeight }, blockPos, ColorSelected, Vao, modelLoc, colorLoc);
+			}
+		}
+
+		SDL_GL_SwapWindow(Window);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
 		
 	}
 	return(0);
