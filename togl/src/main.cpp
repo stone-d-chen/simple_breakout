@@ -55,7 +55,6 @@ void initSDLOpenGLBinding()
 
 	GetOpenGLInfo();
 }
-
 SDL_Window* initWindowing(const char* WindowName, int Width, int Height)
 {
 	SDL_Window* Window = initSDLOpenGLWindow("My Window", 800, 600);
@@ -178,7 +177,6 @@ float quadVertices[] = {
 	 1.0f,  1.0f, 1.0f,	1.0f,
 	 1.0f,  0.0f, 1.0f, 0.0f,
 };
-
 unsigned int quadElementIndices[] =
 {
 	0,1,2,
@@ -192,7 +190,6 @@ enum Direction
 	DOWN,
 	LEFT
 };
-
 Direction VectorDirection(glm::vec2 target)
 {
 	glm::vec2 compass[] = {
@@ -315,13 +312,13 @@ struct Game
 // Players Levels and Tiles
 glm::vec2 playerPosition = { windowWidth / 2.0f , windowHeight * 1.0/ 10.0f };
 glm::vec2 playerDimensions = { 100.0f, 20.0f };
-glm::vec4 playerColor(1.0, 0.0, 0.0, 1.0);
+glm::vec4 playerColor = { 1.0, 0.0, 0.0, 1.0 };
 
 float ballSpeedScale = 0.3f;
 glm::vec2 ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
 glm::vec2 ballPosition = { windowWidth / 2.0f, windowHeight / 2.0f };
 glm::vec2 ballDimensions = { 20.0f, 20.0f };
-glm::vec4 ballColor(0.0, 0.7, 0.0, 1.0);
+glm::vec4 ballColor = { 0.0, 0.7, 0.0, 1.0 };
 
 
 const int BlockRows = 3;
@@ -369,13 +366,9 @@ void UpdatePlayerPosition(glm::vec2* playerPosition, InputState inputState, floa
 {
 	glm::vec2 playerPositionDelta = { 0.0f, 0.0f };
 	if (inputState.right)
-	{
 		playerPositionDelta = glm::vec2(1.0f, 0.0f) * 0.5f * deltaTime;
-	}
 	if (inputState.left)
-	{
 		playerPositionDelta = glm::vec2(-1.0f, 0.0f) * 0.5f * deltaTime;
-	}
 
 	*playerPosition += playerPositionDelta;
 }
@@ -425,13 +418,9 @@ void UpdateBallOnCollision(glm::vec2& ballVelocity, glm::vec2& ballPosition, con
 			float penetration = std::ceilf(glm::length(ballDimensions * 0.5f) - std::abs(diffVector.x));
 
 			if (dir == LEFT)
-			{
 				ballPosition.x -= penetration;
-			}
 			else
-			{
 				ballPosition.x += penetration;
-			}
 		}
 		else
 		{
@@ -440,13 +429,9 @@ void UpdateBallOnCollision(glm::vec2& ballVelocity, glm::vec2& ballPosition, con
 			ballVelocity.y = -ballVelocity.y;
 
 			if (dir == DOWN)
-			{
 				ballPosition.y -= penetration;
-			}
 			else
-			{
 				ballPosition.y += penetration;
-			}
 		}
 	}
 }
