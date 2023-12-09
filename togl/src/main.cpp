@@ -22,50 +22,6 @@ float clamp(float value, float min, float max) {
 }
 
 
-enum Direction
-{
-	UP,
-	RIGHT,
-	DOWN,
-	LEFT
-};
-
-Direction VectorDirection(glm::vec2 target)
-{
-	glm::vec2 compass[] = {
-		glm::vec2(0.0f, 1.0f),	// up
-		glm::vec2(1.0f, 0.0f),	// right
-		glm::vec2(0.0f, -1.0f),	// down
-		glm::vec2(-1.0f, 0.0f)	// left
-	};
-	float max = 0.0f;
-	unsigned int best_match = -1;
-	for (unsigned int i = 0; i < 4; i++)
-	{
-		float dot_product = glm::dot(glm::normalize(target), compass[i]);
-		if (dot_product > max)
-		{
-			max = dot_product;
-			best_match = i;
-		}
-	}
-	return (Direction)best_match;
-}
-
-typedef std::tuple<bool, Direction, glm::vec2> Collision;
-
-bool running = true;
-
-struct InputState
-{
-	bool up;
-	bool down;
-	bool left;
-	bool right;
-};
-InputState inputState = {};
-
-
 void GetOpenGLInfo()
 {
 	std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
@@ -178,6 +134,30 @@ unsigned int CreateShaderProgram(const ShaderProgramSource& source)
 }
 
 
+unsigned int CreateVao(float* Vertices, size_t VertexArraySize , unsigned int* Indices, size_t IndexArraySize)
+{
+	unsigned int Vao;
+	glGenVertexArrays(1, &Vao);
+	glBindVertexArray(Vao);
+
+	unsigned int Vbo;
+	glGenBuffers(1, &Vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, Vbo);
+	glBufferData(GL_ARRAY_BUFFER, VertexArraySize, Vertices, GL_STATIC_DRAW);
+
+	unsigned int Ebo;
+	glGenBuffers(1, &Ebo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, IndexArraySize, Indices, GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+
+	glBindVertexArray(0);
+
+	return Vao;
+}
+
 void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, const glm::vec4 Color, unsigned int Vao, unsigned int modelLoc, unsigned int colorLoc)
 {
 	glm::mat4 model = glm::mat4(1.0);
@@ -191,6 +171,62 @@ void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, 
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 }
+
+float quadVertices[] = {
+	 0.0f,	0.0f, 0.0f,	0.0f,
+	 0.0f,	1.0f, 0.0f,	1.0f,
+	 1.0f,  1.0f, 1.0f,	1.0f,
+	 1.0f,  0.0f, 1.0f, 0.0f,
+};
+
+unsigned int quadElementIndices[] =
+{
+	0,1,2,
+	0,2,3
+};
+
+enum Direction
+{
+	UP,
+	RIGHT,
+	DOWN,
+	LEFT
+};
+
+Direction VectorDirection(glm::vec2 target)
+{
+	glm::vec2 compass[] = {
+		glm::vec2(0.0f, 1.0f),	// up
+		glm::vec2(1.0f, 0.0f),	// right
+		glm::vec2(0.0f, -1.0f),	// down
+		glm::vec2(-1.0f, 0.0f)	// left
+	};
+	float max = 0.0f;
+	unsigned int best_match = -1;
+	for (unsigned int i = 0; i < 4; i++)
+	{
+		float dot_product = glm::dot(glm::normalize(target), compass[i]);
+		if (dot_product > max)
+		{
+			max = dot_product;
+			best_match = i;
+		}
+	}
+	return (Direction)best_match;
+}
+
+typedef std::tuple<bool, Direction, glm::vec2> Collision;
+
+bool running = true;
+
+struct InputState
+{
+	bool up;
+	bool down;
+	bool left;
+	bool right;
+};
+InputState inputState = {};
 
 
 bool UpdateInputState(InputState& inputstate)
@@ -276,28 +312,33 @@ struct Game
 	bool running = true;
 };
 
+// Players Levels and Tiles
 glm::vec2 playerPosition = { windowWidth / 2.0f , windowHeight * 1.0/ 10.0f };
+glm::vec2 playerDimensions = { 100.0f, 20.0f };
+glm::vec4 playerColor(1.0, 0.0, 0.0, 1.0);
 
-float playerVertices[] = {
-	 0.0f,	0.0f, 0.0f,	0.0f,
-	 0.0f,	1.0f, 0.0f,	1.0f,
-	 1.0f,  1.0f, 1.0f,	1.0f,
-	 1.0f,  0.0f, 1.0f, 0.0f,
-};
+float ballSpeedScale = 0.3f;
+glm::vec2 ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+glm::vec2 ballPosition = { windowWidth / 2.0f, windowHeight / 2.0f };
+glm::vec2 ballDimensions = { 20.0f, 20.0f };
+glm::vec4 ballColor(0.0, 0.7, 0.0, 1.0);
 
-unsigned int playerElementIndices[] =
-{
-	0,1,2,
-	0,2,3
-};
 
-// levels and tiles
 const int BlockRows = 3;
 const int BlockCols = 6;
 int gameLevel[BlockRows * BlockCols] = {
 	0, 1, 2, 3, 4, 1,
 	2, 1, 0, 0, 1, 2,
 	3, 0, 4, 2, 1, 0,
+};
+
+glm::vec4 Colors[] =
+{
+	{ 0.0f, 0.0f, 0.0f, 0.0f },
+	{ 0.3f, 0.4f, 0.5f, 1.0f },
+	{ 0.0f, 0.4f, 0.0f, 1.0f },
+	{ 0.0f, 0.0f, 0.5f, 1.0f },
+	{ 0.3f, 0.0f, 0.5f, 1.0f },
 };
 
 std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int BlockCols /*, windowWidth, windowHeight */)
@@ -321,36 +362,6 @@ std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int
 }
 
 const std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, BlockCols);
-
-float blockVertex[] = {
-	 0.0f,	0.0f, 0.0f,	0.0f,
-	 0.0f,	1.0f, 0.0f,	1.0f,
-	 1.0f,  1.0f, 1.0f,	1.0f,
-	 1.0f,  0.0f, 1.0f, 0.0f,
-};
-unsigned int blockIndices[] = {
-	0,1,2,
-	0,2,3
-};
-glm::vec4 Color1 = { 0.3f,0.4f,0.5f,1.0f };
-glm::vec4 Color2 = { 0.0f,0.4f,0.0f,1.0f };
-glm::vec4 Color3 = { 0.0f,0.0f,0.5f,1.0f };
-glm::vec4 Color4 = { 0.3f,0.0f,0.5f,1.0f };
-glm::vec4 ColorDefault = { 0.0f,0.0f,0.0f, 0.0f };
-
-float ballSpeedScale = 0.3f;
-glm::vec2 ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-glm::vec2 ballPosition = { windowWidth/2.0f, windowHeight/2.0f  };
-float ballVertices[] = {
-	 0.0f,	0.0f, 0.0f,	0.0f,
-	 0.0f,	1.0f, 0.0f,	1.0f,
-	 1.0f,  1.0f, 1.0f,	1.0f,
-	 1.0f,  0.0f, 0.0f, 0.0f,
-};
-unsigned int ballIndices[] = {
-	0,1,2,
-	0,2,3
-};
 
 
 
@@ -440,11 +451,17 @@ void UpdateBallOnCollision(glm::vec2& ballVelocity, glm::vec2& ballPosition, con
 	}
 }
 
+struct objectData
+{
+	glm::vec2 position;
+	glm::vec2 dimension;
+	glm::vec4 color;
+};
 
 
 int main(int argc, char** args)
 {
-	SDL_Window* Window = initWindowing("My Window", 800, 600);
+	SDL_Window* Window = initWindowing("My Window", windowWidth, windowHeight);
 
 	//shaders
 	ShaderProgramSource source = ParseShader("res/shaders/Sprite.shader");
@@ -454,35 +471,8 @@ int main(int argc, char** args)
 	int projLoc = glGetUniformLocation(shaderProgram, "projection");
 	int colorLoc = glGetUniformLocation(shaderProgram, "TileColor");
 
-	struct objectData
-	{
-		glm::vec2 position;
-		glm::vec2 dimension;
-
-		glm::vec4 color;
-	};
-
-	// Create Vao //
-	unsigned int Vao;
-	glGenVertexArrays(1, &Vao);
-	unsigned int Vbo;
-	glBindVertexArray(Vao);
-
-	glGenBuffers(1, &Vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, Vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(playerVertices), playerVertices, GL_STATIC_DRAW);
-
-	unsigned int Ebo;
-	glGenBuffers(1, &Ebo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(playerElementIndices), playerElementIndices, GL_STATIC_DRAW);
-
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-
-	glBindVertexArray(0);
+	unsigned int Vao = CreateVao(quadVertices, sizeof(quadVertices), quadElementIndices, sizeof(quadElementIndices));
 	
-
 	// PROJECTION
 	glm::mat4 projection = glm::ortho(0.0f,(float)windowWidth, 0.0f, (float)windowHeight, -1.0f, 1.0f);
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
@@ -503,10 +493,6 @@ int main(int argc, char** args)
 		// 
 		// Draw Ball
 
-
-		glm::vec2 ballDimensions = { 20.0f, 20.0f };
-		glm::vec4 ballColor(0.0, 0.7, 0.0, 1.0);
-
 		objectData ball =
 		{
 			ballPosition,
@@ -518,8 +504,7 @@ int main(int argc, char** args)
 
 		
 		// Draw Player
-		glm::vec2 playerDimensions = { 100.0f, 20.0f };
-		glm::vec4 playerColor(1.0, 0.0, 0.0, 1.0);
+
 		DrawQuad(playerDimensions, playerPosition, playerColor, Vao, modelLoc, colorLoc);
 
 		// Draw Blocks
@@ -530,34 +515,10 @@ int main(int argc, char** args)
 			for (int colIdx = 0; colIdx < BlockCols; ++colIdx)
 			{
 				glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
+				unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
 
-				glm::vec4 ColorSelected = ColorDefault;
-				{ // color select
-					unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
-					switch (TileType)
-					{
-					case 0:
-					{
-						ColorSelected = Color1;
-					} break;
-					case 1:
-					{
-						ColorSelected = Color2;
-					} break;
-					case 2:
-					{
-						ColorSelected = Color3;
-					} break;
-					case 3:
-					{
-						ColorSelected = Color4;
-					} break;
-					default:
-					{
-						ColorSelected = ColorDefault;
-					}
-					}
-				}
+				glm::vec4 ColorSelected = Colors[TileType];
+
 				DrawQuad({ blockWidth, blockHeight }, blockPos, ColorSelected, Vao, modelLoc, colorLoc);
 			}
 		}
@@ -580,13 +541,13 @@ int main(int argc, char** args)
 		// Ball-Brick collision detection
 		for (int i = 0; i < levelBricks.size(); ++i)
 		{
-			if (*((int*)(gameLevel)+i) != 4)
+			if (*((int*)(gameLevel)+i) != 0)
 			{
 				Collision collision = CheckCollision(ballPosition, ballDimensions, levelBricks[i], {blockWidth, blockHeight});
 				if (std::get<0>(collision))
 				{
 					UpdateBallOnCollision(ballVelocity, ballPosition, ballDimensions, collision);
-					gameLevel[i] = 4;
+					gameLevel[i] = 0;
 				}
 			}
 		}
