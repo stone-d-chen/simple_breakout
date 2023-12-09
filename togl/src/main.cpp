@@ -15,13 +15,10 @@
 #include <gtc/type_ptr.hpp>
 
 
-// #define STB_IMAGE_IMPLEMENTATION
-// #include "../vendors/stb_image/stb_image.h"
-
 #include "breakout.cpp"
 
-
-float quadVertices[] = {
+float quadVertices[] =
+{
 	 0.0f,	0.0f, 0.0f,	0.0f,
 	 0.0f,	1.0f, 0.0f,	1.0f,
 	 1.0f,  1.0f, 1.0f,	1.0f,
@@ -36,6 +33,8 @@ unsigned int quadElementIndices[] =
 bool running = true;
 
 InputState inputState = {};
+
+std::vector<QuadRenderData> RenderQueue;
 
 unsigned int windowWidth = 640, windowHeight = 480;
 
@@ -245,10 +244,6 @@ bool UpdateInputState(InputState& inputstate)
 	return true;
 }
 
-
-
-
-
 int main(int argc, char** args)
 {
 	SDL_Window* Window = initWindowing("My Window", windowWidth, windowHeight);
@@ -269,7 +264,6 @@ int main(int argc, char** args)
 
 	// MODEL
 	glm::mat4 model(1.0f);
-	std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, BlockCols);
 
 	uint64_t LAST = SDL_GetPerformanceCounter();
 	while (running)
@@ -279,92 +273,11 @@ int main(int argc, char** args)
 		LAST = NOW;
 
 
-		/////////////////////////// GAME UPDATE //////////////////////////////////////////
-
 		running = UpdateInputState(inputState);
+
+		/////////////////////////// GAME UPDATE //////////////////////////////////////////
 		GameUpdateAndRender(deltaTime, inputState, Vao, modelLoc, colorLoc);
-#if 0
-		UpdatePlayerPosition(&playerPosition, inputState, (float)deltaTime);
 
-		// Update ball velocity
-		ballPosition += ballVelocity * (float)deltaTime;
-
-		float blockWidth = (float)windowWidth / (float)BlockCols;
-		float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
-		// Ball-Brick collision detection
-		for (int i = 0; i < levelBricks.size(); ++i)
-		{
-			if (*((int*)(gameLevel)+i) != 0)
-			{
-				Collision collision = CheckCollision(ballPosition, ballDimensions, levelBricks[i], { blockWidth, blockHeight });
-				if (std::get<0>(collision))
-				{
-					UpdateBallOnCollision(ballVelocity, ballPosition, ballDimensions, collision);
-					gameLevel[i] = 0;
-				}
-			}
-		}
-
-		// Ball collision detection
-		if (ballPosition.x + ballDimensions.x > windowWidth)
-		{
-			ballVelocity.x = -ballVelocity.x;
-			ballPosition.x = windowWidth - ballDimensions.x;
-		}
-		else if (ballPosition.y + ballDimensions.y > windowHeight)
-		{
-			ballVelocity.y = -ballVelocity.y;
-			ballPosition.y = windowHeight - ballDimensions.y;
-		}
-		else if (ballPosition.x < 0)
-		{
-			ballVelocity.x = -ballVelocity.x;
-			ballPosition.x = 0;
-		}
-		else if (ballPosition.y < 0)
-		{
-			ballVelocity = { 0.0f, 0.0f };
-			ballPosition.y = 0;
-		}
-
-		// ball paddle collision detection
-		Collision collision = CheckCollision(ballPosition, ballDimensions, playerPosition, playerDimensions);
-		UpdateBallOnCollision(ballVelocity, ballPosition, ballDimensions, collision);
-
-
-		//////////////////// DRAW PHASE /////////////////////////////////
-		// 
-		// Draw Ball
-
-		objectData ball =
-		{
-			ballPosition,
-			{20.0f, 20.0f},
-		};
-		ball.color = ballColor;
-
-		DrawQuad(ball.dimension, ballPosition, ball.color, Vao, modelLoc, colorLoc);
-
-		
-		// Draw Player
-
-		DrawQuad(playerDimensions, playerPosition, playerColor, Vao, modelLoc, colorLoc);
-
-		// Draw Blocks
-
-		for (int rowIdx = 0; rowIdx < BlockRows; ++rowIdx)
-		{
-			for (int colIdx = 0; colIdx < BlockCols; ++colIdx)
-			{
-				glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
-				unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
-
-				glm::vec4 ColorSelected = Colors[TileType];
-
-				DrawQuad({ blockWidth, blockHeight }, blockPos, ColorSelected, Vao, modelLoc, colorLoc);
-			}
-		}
-#endif
 		SDL_GL_SwapWindow(Window);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

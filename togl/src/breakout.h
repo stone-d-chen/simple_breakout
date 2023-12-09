@@ -7,6 +7,14 @@ struct InputState
 	bool left;
 	bool right;
 };
+
+struct QuadRenderData
+{
+	glm::vec2 pixelDimensions;
+	glm::vec2 pixelPosition;
+	glm::vec4 Color;
+};
+
 struct objectData
 {
 	glm::vec2 position;
