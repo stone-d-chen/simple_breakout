@@ -174,6 +174,19 @@ unsigned int CreateVao(float* Vertices, size_t VertexArraySize , unsigned int* I
 	return Vao;
 }
 
+void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, const glm::vec4 Color, unsigned int Vao, unsigned int modelLoc, unsigned int colorLoc)
+{
+	glm::mat4 model = glm::mat4(1.0);
+	model = glm::translate(model, glm::vec3(pixelPosition, 0.0f));
+	model = glm::scale(model, glm::vec3(pixelDimensions, 1.0f));
+
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+	glUniform4fv(colorLoc, 1, glm::value_ptr(Color));
+
+	glBindVertexArray(Vao);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+}
 
 bool UpdateInputState(InputState& inputstate)
 {
@@ -276,7 +289,13 @@ int main(int argc, char** args)
 		running = UpdateInputState(inputState);
 
 		/////////////////////////// GAME UPDATE //////////////////////////////////////////
-		GameUpdateAndRender(deltaTime, inputState, Vao, modelLoc, colorLoc);
+		GameUpdateAndRender(deltaTime, inputState, RenderQueue);
+
+		for (QuadRenderData Data : RenderQueue)
+		{
+			DrawQuad(Data.pixelDimensions, Data.pixelPosition, Data.Color, Vao, modelLoc, colorLoc);
+		}
+		RenderQueue.clear();
 
 		SDL_GL_SwapWindow(Window);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

@@ -12,6 +12,7 @@ glm::vec2 playerDimensions = { 100.0f, 20.0f };
 glm::vec4 playerColor = { 1.0, 0.0, 0.0, 1.0 };
 
 
+
 float ballSpeedScale = 0.3f;
 glm::vec2 ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
 glm::vec2 ballPosition = { 640 / 2.0f, 480 / 2.0f };
@@ -57,19 +58,6 @@ Direction VectorDirection(glm::vec2 target)
 	return (Direction)best_match;
 }
 
-void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, const glm::vec4 Color, unsigned int Vao, unsigned int modelLoc, unsigned int colorLoc)
-{
-	glm::mat4 model = glm::mat4(1.0);
-	model = glm::translate(model, glm::vec3(pixelPosition, 0.0f));
-	model = glm::scale(model, glm::vec3(pixelDimensions, 1.0f));
-
-	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-	glUniform4fv(colorLoc, 1, glm::value_ptr(Color));
-
-	glBindVertexArray(Vao);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-}
 
 std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int BlockCols /*, windowWidth, windowHeight */)
 {
@@ -93,12 +81,16 @@ std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int
 	return brickPositions;
 }
 
+const std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, BlockCols);
+
 bool AABBCollisionDetection(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::vec2 positionTwo, glm::vec2 dimensionTwo)
 {
 	bool collisionX = (positionOne.x + dimensionOne.x >= positionTwo.x) && (positionOne.x <= positionTwo.x + dimensionTwo.x);
 	bool collisionY = (positionOne.y + dimensionOne.y >= positionTwo.y) && (positionOne.y <= positionTwo.y + dimensionTwo.y);
 	return collisionX && collisionY;
 }
+
+
 
 Collision CheckCollision(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::vec2 positionTwo, glm::vec2 dimensionTwo) // AABB - Circle collision
 {
@@ -169,9 +161,8 @@ void UpdatePlayerPosition(glm::vec2* playerPosition, InputState inputState, floa
 	*playerPosition += playerPositionDelta;
 }
 
-const std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, BlockCols);
-
-void GameUpdateAndRender(double deltaTime, InputState inputState ,unsigned int Vao, unsigned int modelLoc, unsigned int colorLoc)
+void GameUpdateAndRender(double deltaTime, InputState inputState,
+	std::vector<QuadRenderData>& RenderQueue)
 {
 	unsigned int windowWidth = 640, windowHeight = 480;
 
@@ -234,12 +225,12 @@ void GameUpdateAndRender(double deltaTime, InputState inputState ,unsigned int V
 	};
 	ball.color = ballColor;
 
-	DrawQuad(ball.dimension, ballPosition, ball.color, Vao, modelLoc, colorLoc);
+	RenderQueue.push_back({ ball.dimension, ballPosition, ball.color });
 
 
 	// Draw Player
 
-	DrawQuad(playerDimensions, playerPosition, playerColor, Vao, modelLoc, colorLoc);
+	RenderQueue.push_back({ playerDimensions, playerPosition, playerColor });
 
 	// Draw Blocks
 
@@ -252,7 +243,8 @@ void GameUpdateAndRender(double deltaTime, InputState inputState ,unsigned int V
 
 			glm::vec4 ColorSelected = Colors[TileType];
 
-			DrawQuad({ blockWidth, blockHeight }, blockPos, ColorSelected, Vao, modelLoc, colorLoc);
+			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected });
+
 		}
 	}
 
