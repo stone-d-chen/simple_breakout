@@ -7,8 +7,32 @@ struct InputState
 	bool left;
 	bool right;
 };
+struct objectData
+{
+	glm::vec2 position;
+	glm::vec2 dimension;
+	glm::vec4 color;
+};
 
-// Players Levels and Tiles
-glm::vec2 playerPosition = { 640 / 2.0f , 480 * 1.0/ 10.0f };
-glm::vec2 playerDimensions = { 100.0f, 20.0f };
-glm::vec4 playerColor = { 1.0, 0.0, 0.0, 1.0 };
+enum class GameState
+{
+	ACTIVE = 0, MENU, WIN
+};
+
+struct Game
+{
+	GameState gameState;
+	InputState inputState;
+	bool running = true;
+};
+
+enum Direction
+{
+	UP,
+	RIGHT,
+	DOWN,
+	LEFT
+};
+
+typedef std::tuple<bool, Direction, glm::vec2> Collision;
+
