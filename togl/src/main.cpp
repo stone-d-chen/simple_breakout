@@ -31,11 +31,8 @@ unsigned int quadElementIndices[] =
 };
 
 bool running = true;
-
 InputState inputState = {};
-
 std::vector<QuadRenderData> RenderQueue;
-
 unsigned int windowWidth = 640, windowHeight = 480;
 
 
@@ -223,6 +220,11 @@ bool UpdateInputState(InputState& inputstate)
 				inputstate.right = true;
 				break;
 			}
+			case SDLK_r:
+			{
+				inputstate.r = true;
+				break;
+			}
 			}
 		}
 		if (e.type == SDL_KEYUP)
@@ -249,6 +251,11 @@ bool UpdateInputState(InputState& inputstate)
 			case SDLK_RIGHT:
 			{
 				inputstate.right = false;
+				break;
+			}
+			case SDLK_r:
+			{
+				inputstate.r = false;
 				break;
 			}
 			}
@@ -288,7 +295,7 @@ int main(int argc, char** args)
 
 		running = UpdateInputState(inputState);
 
-		/////////////////////////// GAME UPDATE //////////////////////////////////////////
+		/////////////////////////// GAME UPDATE & Render //////////////////////////////////////////
 		GameUpdateAndRender(deltaTime, inputState, RenderQueue);
 
 		for (QuadRenderData Data : RenderQueue)
@@ -299,9 +306,6 @@ int main(int argc, char** args)
 
 		SDL_GL_SwapWindow(Window);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
-		
 	}
 	return(0);
 }

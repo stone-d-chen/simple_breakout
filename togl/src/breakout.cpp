@@ -5,13 +5,10 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 
-
 // Players Levels and Tiles
 glm::vec2 playerPosition = { 640 / 2.0f , 480 * 1.0 / 10.0f };
 glm::vec2 playerDimensions = { 100.0f, 20.0f };
 glm::vec4 playerColor = { 1.0, 0.0, 0.0, 1.0 };
-
-
 
 float ballSpeedScale = 0.3f;
 glm::vec2 ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
@@ -21,7 +18,8 @@ glm::vec4 ballColor = { 0.0, 0.7, 0.0, 1.0 };
 
 const int BlockRows = 3;
 const int BlockCols = 6;
-int gameLevel[BlockRows * BlockCols] = {
+int gameLevel[BlockRows * BlockCols] =
+{
 	0, 1, 2, 3, 4, 1,
 	2, 1, 0, 0, 1, 2,
 	3, 0, 4, 2, 1, 0,
@@ -90,26 +88,19 @@ bool AABBCollisionDetection(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::
 	return collisionX && collisionY;
 }
 
-
-
 Collision CheckCollision(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::vec2 positionTwo, glm::vec2 dimensionTwo) // AABB - Circle collision
 {
-	// get center point circle first 
-	glm::vec2 Center = positionOne + 0.5f * dimensionOne;
-
-	// calculate AABB info (center, half-extents)
-	glm::vec2 aabbHalfExtents = 0.5f * dimensionTwo;
+	glm::vec2 Center = positionOne + 0.5f * dimensionOne; // get center point circle first 
+	
+	glm::vec2 aabbHalfExtents = 0.5f * dimensionTwo;    // calculate AABB info (center, half-extents)
 	glm::vec2 aabbCenter = positionTwo + aabbHalfExtents;
-
-	// get difference vector between both centers
-	glm::vec2 Difference = Center - aabbCenter;
+	
+	glm::vec2 Difference = Center - aabbCenter;  // get difference vector between both centers
 	glm::vec2 Clamped = glm::clamp(Difference, -aabbHalfExtents, aabbHalfExtents);
 
-	// add clamped value to AABB_center and we get the value of box closest to circle
-	glm::vec2 Closest = aabbCenter + Clamped;
-
-	// retrieve vector between center circle and closest point AABB and check if length <= radius
-	Difference = Center - Closest;
+	glm::vec2 Closest = aabbCenter + Clamped; // add clamped value to AABB_center and we get the value of box closest to circle
+	
+	Difference = Center - Closest; // retrieve vector between center circle and closest point AABB and check if length <= radius
 
 	if (glm::length(Difference) <= glm::length(dimensionOne * 0.5f))
 		return std::make_tuple(true, VectorDirection(Difference), Difference);
@@ -127,9 +118,7 @@ void UpdateBallOnCollision(glm::vec2& ballVelocity, glm::vec2& ballPosition, con
 		if (dir == LEFT || dir == RIGHT)
 		{
 			ballVelocity.x = -ballVelocity.x;
-
 			float penetration = std::ceilf(glm::length(ballDimensions * 0.5f) - std::abs(diffVector.x));
-
 			if (dir == LEFT)
 				ballPosition.x -= penetration;
 			else
@@ -138,9 +127,7 @@ void UpdateBallOnCollision(glm::vec2& ballVelocity, glm::vec2& ballPosition, con
 		else
 		{
 			float penetration = glm::length(ballDimensions * 0.5f) - std::abs(diffVector.y);
-
 			ballVelocity.y = -ballVelocity.y;
-
 			if (dir == DOWN)
 				ballPosition.y -= penetration;
 			else
@@ -161,19 +148,29 @@ void UpdatePlayerPosition(glm::vec2* playerPosition, InputState inputState, floa
 	*playerPosition += playerPositionDelta;
 }
 
-void GameUpdateAndRender(double deltaTime, InputState inputState,
-	std::vector<QuadRenderData>& RenderQueue)
+void GameUpdateAndRender(double deltaTime, InputState inputState, std::vector<QuadRenderData>& RenderQueue)
 {
-	unsigned int windowWidth = 640, windowHeight = 480;
+	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 
+	///////////// UPDATE POSITIONS ///////////////
+
+	if (inputState.r)
+	{
+		ballSpeedScale = 0.3f;
+		ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+		ballPosition = { 640 / 2.0f, 480 / 2.0f };
+	}
+
+	// player position 
 	UpdatePlayerPosition(&playerPosition, inputState, (float)deltaTime);
 
-	// Update ball velocity
+	// ball position
 	ballPosition += ballVelocity * (float)deltaTime;
 
+	//////////////// PHYSICS REESOLUTION /////////////////
+	// Ball-Brick collision detection
 	float blockWidth = (float)windowWidth / (float)BlockCols;
 	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
-	// Ball-Brick collision detection
 	for (int i = 0; i < levelBricks.size(); ++i)
 	{
 		if (*((int*)(gameLevel)+i) != 0)
@@ -187,7 +184,7 @@ void GameUpdateAndRender(double deltaTime, InputState inputState,
 		}
 	}
 
-	// Ball collision detection
+	// Ball-wall collision detection
 	if (ballPosition.x + ballDimensions.x > windowWidth)
 	{
 		ballVelocity.x = -ballVelocity.x;
@@ -209,31 +206,22 @@ void GameUpdateAndRender(double deltaTime, InputState inputState,
 		ballPosition.y = 0;
 	}
 
-	// ball paddle collision detection
+	// ball-paddle collision detection
 	Collision collision = CheckCollision(ballPosition, ballDimensions, playerPosition, playerDimensions);
 	UpdateBallOnCollision(ballVelocity, ballPosition, ballDimensions, collision);
+	glm::vec2 difference = std::get<2>(collision);
+	ballVelocity += 0.005 * glm::length(difference);
 
 
 	//////////////////// DRAW PHASE /////////////////////////////////
-	// 
+
 	// Draw Ball
-
-	objectData ball =
-	{
-		ballPosition,
-		{20.0f, 20.0f},
-	};
-	ball.color = ballColor;
-
-	RenderQueue.push_back({ ball.dimension, ballPosition, ball.color });
-
+	RenderQueue.push_back({ ballDimensions, ballPosition, ballColor });
 
 	// Draw Player
-
 	RenderQueue.push_back({ playerDimensions, playerPosition, playerColor });
 
 	// Draw Blocks
-
 	for (int rowIdx = 0; rowIdx < BlockRows; ++rowIdx)
 	{
 		for (int colIdx = 0; colIdx < BlockCols; ++colIdx)
@@ -244,7 +232,6 @@ void GameUpdateAndRender(double deltaTime, InputState inputState,
 			glm::vec4 ColorSelected = Colors[TileType];
 
 			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected });
-
 		}
 	}
 

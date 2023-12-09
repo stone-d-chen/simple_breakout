@@ -6,6 +6,7 @@ struct InputState
 	bool down;
 	bool left;
 	bool right;
+	bool r;
 };
 
 struct QuadRenderData
