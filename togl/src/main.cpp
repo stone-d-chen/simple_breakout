@@ -33,6 +33,7 @@ unsigned int quadElementIndices[] =
 bool running = true;
 InputState inputState = {};
 std::vector<QuadRenderData> RenderQueue;
+uint32_t AudioQueue[10];
 unsigned int windowWidth = 640, windowHeight = 480;
 
 
@@ -46,6 +47,7 @@ void GetOpenGLInfo()
 
 SDL_Window* initSDLOpenGLWindow(const char* WindowName, int Width, int Height)
 {
+	SDL_Init(SDL_INIT_VIDEO);
 	SDL_Window* Window = SDL_CreateWindow(WindowName,
 		SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED,
@@ -53,11 +55,12 @@ SDL_Window* initSDLOpenGLWindow(const char* WindowName, int Width, int Height)
 		SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
 	SDL_GLContext Context = SDL_GL_CreateContext(Window);
 
+
 	return Window;
 }
+
 void initSDLOpenGLBinding()
 {
-	SDL_Init(SDL_INIT_VIDEO);
 	gladLoadGLLoader(SDL_GL_GetProcAddress);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
@@ -264,9 +267,57 @@ bool UpdateInputState(InputState& inputstate)
 	return true;
 }
 
+
+#define MUS_PATH "bleep.wav"
+
+SDL_AudioDeviceID initSDLAudioDevice()
+{
+	if (SDL_Init(SDL_INIT_AUDIO) < 0)
+	{
+		printf(SDL_GetError());
+
+	}
+	SDL_AudioSpec wav_spec = {};
+	SDL_AudioDeviceID audiodevice = SDL_OpenAudioDevice(NULL, 0, &wav_spec, NULL, 0);
+	if (audiodevice == 0)
+	{
+		printf(SDL_GetError());
+	}
+	return audiodevice;
+}
+
+struct SDLAudioData
+{
+	SDL_AudioSpec SDLSpec;
+	uint8_t* WavBuffer;
+	uint32_t WavSize;
+};
+
+SDLAudioData SDLLoadWAV(const char* filepath)
+{
+	SDLAudioData AudioData = {};
+	
+	if (SDL_LoadWAV("C:\\repos\\togl\\togl\\src\\solid.wav", &AudioData.SDLSpec, &AudioData.WavBuffer, &AudioData.WavSize) == NULL)
+	{
+		printf(SDL_GetError());
+		printf("\n");
+	}
+
+	return AudioData;
+}
+
 int main(int argc, char** args)
 {
+	// window 
 	SDL_Window* Window = initWindowing("My Window", windowWidth, windowHeight);
+
+	// audio
+	SDL_AudioDeviceID audiodevice = initSDLAudioDevice();
+
+	SDLAudioData bleepaudio = SDLLoadWAV("C:\\repos\\togl\\togl\\src\\bleep.wav");
+
+	SDL_PauseAudioDevice(audiodevice, 0);
+
 
 	//shaders
 	ShaderProgramSource source = ParseShader("res/shaders/Sprite.shader");
@@ -292,11 +343,10 @@ int main(int argc, char** args)
 		double deltaTime = (double)((NOW - LAST) * 1000 / (double)SDL_GetPerformanceFrequency());
 		LAST = NOW;
 
-
 		running = UpdateInputState(inputState);
 
 		/////////////////////////// GAME UPDATE & Render //////////////////////////////////////////
-		GameUpdateAndRender(deltaTime, inputState, RenderQueue);
+		GameUpdateAndRender(deltaTime, inputState, RenderQueue, AudioQueue);
 
 		for (QuadRenderData Data : RenderQueue)
 		{
@@ -304,8 +354,19 @@ int main(int argc, char** args)
 		}
 		RenderQueue.clear();
 
+		if (AudioQueue[0] == 1)
+		{
+			SDL_QueueAudio(audiodevice, bleepaudio.WavBuffer, bleepaudio.WavSize);
+		}
+		else if((AudioQueue[0] == 2))
+		{
+			//SDL_QueueAudio(audiodevice, wav2_buffer, wav2_length);
+		}
+		AudioQueue[0] = 10;
+
 		SDL_GL_SwapWindow(Window);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	}
 	return(0);
 }

@@ -5,25 +5,17 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 
-// Players Levels and Tiles
-glm::vec2 playerPosition = { 640 / 2.0f , 480 * 1.0 / 10.0f };
-glm::vec2 playerDimensions = { 100.0f, 20.0f };
-glm::vec4 playerColor = { 1.0, 0.0, 0.0, 1.0 };
-
-float ballSpeedScale = 0.3f;
-glm::vec2 ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-glm::vec2 ballPosition = { 640 / 2.0f, 480 / 2.0f };
-glm::vec2 ballDimensions = { 20.0f, 20.0f };
-glm::vec4 ballColor = { 0.0, 0.7, 0.0, 1.0 };
-
-const int BlockRows = 3;
-const int BlockCols = 6;
-int gameLevel[BlockRows * BlockCols] =
-{
-	0, 1, 2, 3, 4, 1,
-	2, 1, 0, 0, 1, 2,
-	3, 0, 4, 2, 1, 0,
-};
+// // Players Levels and Tiles
+// glm::vec2 playerPosition   = { 640 / 2.0f , 480 * 1.0 / 10.0f };
+// glm::vec2 playerDimensions = { 100.0f, 20.0f };
+// glm::vec4 playerColor      = { 1.0, 0.0, 0.0, 1.0 };
+// 
+// float ballSpeedScale = 0.3f;
+// glm::vec2 ball.position   = { 640 / 2.0f, 480 / 2.0f };
+// glm::vec4 ballColor      = { 0.0, 0.7, 0.0, 1.0 };
+// glm::vec2 ballDimension = { 20.0f, 20.0f };
+// glm::vec2 ballVelocity   = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+// 
 
 glm::vec4 Colors[] =
 {
@@ -33,6 +25,8 @@ glm::vec4 Colors[] =
 	{ 0.0f, 0.0f, 0.5f, 1.0f },
 	{ 0.3f, 0.0f, 0.5f, 1.0f },
 };
+
+//////////////// COLLISION /////////////////////////
 
 Direction VectorDirection(glm::vec2 target)
 {
@@ -55,31 +49,6 @@ Direction VectorDirection(glm::vec2 target)
 	}
 	return (Direction)best_match;
 }
-
-
-std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int BlockCols /*, windowWidth, windowHeight */)
-{
-	unsigned int windowWidth = 640, windowHeight = 480;
-
-	std::vector<glm::vec2> brickPositions;
-
-	float blockWidth = (float)640 / (float)BlockCols;
-	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
-
-	for (int rowIdx = 0; rowIdx < BlockRows; ++rowIdx)
-	{
-		for (int colIdx = 0; colIdx < BlockCols; ++colIdx)
-		{
-			float blockPositionX = colIdx * blockWidth;
-			float blockPositionY = windowHeight - (rowIdx + 1) * blockHeight;
-
-			brickPositions.push_back({ blockPositionX, blockPositionY });
-		}
-	}
-	return brickPositions;
-}
-
-const std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, BlockCols);
 
 bool AABBCollisionDetection(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::vec2 positionTwo, glm::vec2 dimensionTwo)
 {
@@ -108,7 +77,6 @@ Collision CheckCollision(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::vec
 		return std::make_tuple(false, UP, glm::vec2(0.0f, 0.0f));
 }
 
-
 void UpdateBallOnCollision(glm::vec2& ballVelocity, glm::vec2& ballPosition, const glm::vec2& ballDimensions, Collision collision)
 {
 	if (std::get<0>(collision))
@@ -136,7 +104,6 @@ void UpdateBallOnCollision(glm::vec2& ballVelocity, glm::vec2& ballPosition, con
 	}
 }
 
-
 void UpdatePlayerPosition(glm::vec2* playerPosition, InputState inputState, float deltaTime)
 {
 	glm::vec2 playerPositionDelta = { 0.0f, 0.0f };
@@ -148,24 +115,96 @@ void UpdatePlayerPosition(glm::vec2* playerPosition, InputState inputState, floa
 	*playerPosition += playerPositionDelta;
 }
 
-void GameUpdateAndRender(double deltaTime, InputState inputState, std::vector<QuadRenderData>& RenderQueue)
+/////////////////////////////////////////
+
+// /// ///              Level init       /////////// 
+const int BlockRows = 3;
+const int BlockCols = 6;
+
+std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int BlockCols /*, windowWidth, windowHeight */)
+{
+	unsigned int windowWidth = 640, windowHeight = 480;
+
+	std::vector<glm::vec2> brickPositions;
+
+	float blockWidth = (float)640 / (float)BlockCols;
+	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
+
+	for (unsigned int rowIdx = 0; rowIdx < BlockRows; ++rowIdx)
+	{
+		for (unsigned int colIdx = 0; colIdx < BlockCols; ++colIdx)
+		{
+			float blockPositionX = colIdx * blockWidth;
+			float blockPositionY = windowHeight - (rowIdx + 1) * blockHeight;
+
+			brickPositions.push_back({ blockPositionX, blockPositionY });
+		}
+	}
+	return brickPositions;
+}
+
+const std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, BlockCols);
+
+int gameLevel[] =
+{
+  0, 1, 2, 3, 4, 1,
+  2, 1, 0, 0, 1, 2,
+  3, 0, 4, 2, 1, 0,
+};
+
+GameData initGameData()
+{
+	GameData result;
+
+	float ballSpeedScale = 0.3f;
+	objectData ball =
+	{
+		{ 20.0f, 20.0f },
+		{ 0.0, 0.7, 0.0, 1.0 },
+		{ 640 / 2.0f, 480 / 2.0f },
+		{ 1.0f * ballSpeedScale, 1.0f * ballSpeedScale },
+	};
+	objectData player =
+	{
+		{ 100.0f, 20.0f },
+		{ 1.0, 0.0, 0.0, 1.0 },
+		{ 640 / 2.0f , 480 * 1.0 / 10.0f },
+		{},
+	};
+
+	result.ball = ball;
+	result.player = player;
+	result.gameLevel = gameLevel;
+
+	return result;
+}
+///   ////            gllobal data              ////
+GameData data = initGameData();
+
+void GameUpdateAndRender(double deltaTime, InputState inputState, std::vector<QuadRenderData>& RenderQueue, uint32_t* AudioQueue)
 {
 	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 
-	///////////// UPDATE POSITIONS ///////////////
+	objectData& ball = data.ball;
+	objectData& player = data.player;
 
+	///////////// UPDATE POSITIONS ///////////////
 	if (inputState.r)
 	{
-		ballSpeedScale = 0.3f;
-		ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-		ballPosition = { 640 / 2.0f, 480 / 2.0f };
+		// ballSpeedScale = 0.3f;
+		// ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+		// ballPosition = { 640 / 2.0f, 480 / 2.0f };
+		
+		float ballSpeedScale = 0.3f;
+		ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+		ball.position = { 640 / 2.0f, 480 / 2.0f };
 	}
 
 	// player position 
-	UpdatePlayerPosition(&playerPosition, inputState, (float)deltaTime);
+	UpdatePlayerPosition(&player.position, inputState, (float)deltaTime);
 
 	// ball position
-	ballPosition += ballVelocity * (float)deltaTime;
+	ball.position += ball.velocity * (float)deltaTime;
 
 	//////////////// PHYSICS REESOLUTION /////////////////
 	// Ball-Brick collision detection
@@ -173,53 +212,56 @@ void GameUpdateAndRender(double deltaTime, InputState inputState, std::vector<Qu
 	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
 	for (int i = 0; i < levelBricks.size(); ++i)
 	{
-		if (*((int*)(gameLevel)+i) != 0)
+		if (*((int*)(data.gameLevel)+i) != 0)
 		{
-			Collision collision = CheckCollision(ballPosition, ballDimensions, levelBricks[i], { blockWidth, blockHeight });
+			Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
 			if (std::get<0>(collision))
 			{
-				UpdateBallOnCollision(ballVelocity, ballPosition, ballDimensions, collision);
-				gameLevel[i] = 0;
+				UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+				data.gameLevel[i] = 0;
+				AudioQueue[0] = 1;
 			}
 		}
 	}
 
 	// Ball-wall collision detection
-	if (ballPosition.x + ballDimensions.x > windowWidth)
+	if (ball.position.x + ball.dimension.x > windowWidth)
 	{
-		ballVelocity.x = -ballVelocity.x;
-		ballPosition.x = windowWidth - ballDimensions.x;
+		ball.velocity.x = -ball.velocity.x;
+		ball.position.x = windowWidth - ball.dimension.x;
 	}
-	else if (ballPosition.y + ballDimensions.y > windowHeight)
+	else if (ball.position.y + ball.dimension.y > windowHeight)
 	{
-		ballVelocity.y = -ballVelocity.y;
-		ballPosition.y = windowHeight - ballDimensions.y;
+		ball.velocity.y = -ball.velocity.y;
+		ball.position.y = windowHeight - ball.dimension.y;
 	}
-	else if (ballPosition.x < 0)
+	else if (ball.position.x < 0)
 	{
-		ballVelocity.x = -ballVelocity.x;
-		ballPosition.x = 0;
+		ball.velocity.x = -ball.velocity.x;
+		ball.position.x = 0;
 	}
-	else if (ballPosition.y < 0)
+	else if (ball.position.y < 0)
 	{
-		ballVelocity = { 0.0f, 0.0f };
-		ballPosition.y = 0;
+		ball.velocity = { 0.0f, 0.0f };
+		ball.position.y = 0;
 	}
 
 	// ball-paddle collision detection
-	Collision collision = CheckCollision(ballPosition, ballDimensions, playerPosition, playerDimensions);
-	UpdateBallOnCollision(ballVelocity, ballPosition, ballDimensions, collision);
+	Collision collision = CheckCollision(ball.position, ball.dimension, player.position, player.dimension);
+	UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+	if (std::get<0>(collision))
+	{
+		AudioQueue[0] = 1;
+	}
 	glm::vec2 difference = std::get<2>(collision);
-	ballVelocity += 0.005 * glm::length(difference);
-
+	ball.velocity += 0.005 * glm::length(difference);
 
 	//////////////////// DRAW PHASE /////////////////////////////////
-
 	// Draw Ball
-	RenderQueue.push_back({ ballDimensions, ballPosition, ballColor });
+	RenderQueue.push_back({ ball.dimension, ball.position, ball.color });
 
 	// Draw Player
-	RenderQueue.push_back({ playerDimensions, playerPosition, playerColor });
+	RenderQueue.push_back({ player.dimension, player.position, player.color });
 
 	// Draw Blocks
 	for (int rowIdx = 0; rowIdx < BlockRows; ++rowIdx)
@@ -227,7 +269,7 @@ void GameUpdateAndRender(double deltaTime, InputState inputState, std::vector<Qu
 		for (int colIdx = 0; colIdx < BlockCols; ++colIdx)
 		{
 			glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
-			unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
+			unsigned int TileType = data.gameLevel[rowIdx * BlockCols + colIdx];
 
 			glm::vec4 ColorSelected = Colors[TileType];
 

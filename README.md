@@ -1,4 +1,4 @@
-## 12/19/2023
+## 12/9/2023
 
 Finally did a refactor, trying to split out the the platform specific stuff from the actual game logic. Started by sticking the internal loop into it's own function and file. Added the include and progressively moved the include up. Once I hit a compiler error, I moved the appropriate functions into the breakout.cpp, generally this meant that it was game specific. Except DrawQuad, that was annoying because it ended up being the only function left with openGL function calls.
 

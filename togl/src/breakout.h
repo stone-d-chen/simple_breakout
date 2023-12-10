@@ -18,9 +18,10 @@ struct QuadRenderData
 
 struct objectData
 {
-	glm::vec2 position;
 	glm::vec2 dimension;
 	glm::vec4 color;
+	glm::vec2 position;
+	glm::vec2 velocity;
 };
 
 enum class GameState
@@ -45,3 +46,9 @@ enum Direction
 
 typedef std::tuple<bool, Direction, glm::vec2> Collision;
 
+struct GameData
+{
+	objectData ball;
+	objectData player;
+	int* gameLevel;
+};
