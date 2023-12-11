@@ -6,7 +6,15 @@ struct InputState
 	bool down;
 	bool left;
 	bool right;
-	bool r;
+	bool reset;
+	bool pause;
+
+	bool upProcessed;
+	bool downProcessed;
+	bool leftProcessed;
+	bool rightProcessed;
+	bool resetProcessed;
+	bool pauseProcessed;
 };
 
 struct QuadRenderData
@@ -44,11 +52,17 @@ enum Direction
 	LEFT
 };
 
-typedef std::tuple<bool, Direction, glm::vec2> Collision;
-
 struct GameData
 {
 	objectData ball;
 	objectData player;
 	int* gameLevel;
+	int playerScore = 0;
+};
+
+struct Collision
+{
+	bool hasCollided;
+	Direction aabbCollisionSide;
+	glm::vec2 difference;
 };

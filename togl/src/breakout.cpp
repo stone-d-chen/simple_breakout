@@ -5,18 +5,6 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 
-// // Players Levels and Tiles
-// glm::vec2 playerPosition   = { 640 / 2.0f , 480 * 1.0 / 10.0f };
-// glm::vec2 playerDimensions = { 100.0f, 20.0f };
-// glm::vec4 playerColor      = { 1.0, 0.0, 0.0, 1.0 };
-// 
-// float ballSpeedScale = 0.3f;
-// glm::vec2 ball.position   = { 640 / 2.0f, 480 / 2.0f };
-// glm::vec4 ballColor      = { 0.0, 0.7, 0.0, 1.0 };
-// glm::vec2 ballDimension = { 20.0f, 20.0f };
-// glm::vec2 ballVelocity   = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-// 
-
 glm::vec4 Colors[] =
 {
 	{ 0.0f, 0.0f, 0.0f, 0.0f },
@@ -59,6 +47,8 @@ bool AABBCollisionDetection(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::
 
 Collision CheckCollision(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::vec2 positionTwo, glm::vec2 dimensionTwo) // AABB - Circle collision
 {
+	Collision result = {};
+
 	glm::vec2 Center = positionOne + 0.5f * dimensionOne; // get center point circle first 
 	
 	glm::vec2 aabbHalfExtents = 0.5f * dimensionTwo;    // calculate AABB info (center, half-extents)
@@ -70,19 +60,24 @@ Collision CheckCollision(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::vec
 	glm::vec2 Closest = aabbCenter + Clamped; // add clamped value to AABB_center and we get the value of box closest to circle
 	
 	Difference = Center - Closest; // retrieve vector between center circle and closest point AABB and check if length <= radius
+	
+	result.difference = Difference;
+	result.aabbCollisionSide = VectorDirection(Difference);
 
 	if (glm::length(Difference) <= glm::length(dimensionOne * 0.5f))
-		return std::make_tuple(true, VectorDirection(Difference), Difference);
+		result.hasCollided = true;
 	else
-		return std::make_tuple(false, UP, glm::vec2(0.0f, 0.0f));
+		result.hasCollided = false;
+
+	return result;
 }
 
 void UpdateBallOnCollision(glm::vec2& ballVelocity, glm::vec2& ballPosition, const glm::vec2& ballDimensions, Collision collision)
 {
-	if (std::get<0>(collision))
+	if (collision.hasCollided)
 	{
-		Direction dir = std::get<1>(collision);
-		glm::vec2 diffVector = std::get<2>(collision);
+		Direction dir = collision.aabbCollisionSide;
+		glm::vec2 diffVector = collision.difference;
 		if (dir == LEFT || dir == RIGHT)
 		{
 			ballVelocity.x = -ballVelocity.x;
@@ -127,7 +122,7 @@ std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int
 
 	std::vector<glm::vec2> brickPositions;
 
-	float blockWidth = (float)640 / (float)BlockCols;
+	float blockWidth = (float)windowWidth / (float)BlockCols;
 	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
 
 	for (unsigned int rowIdx = 0; rowIdx < BlockRows; ++rowIdx)
@@ -181,80 +176,122 @@ GameData initGameData()
 ///   ////            gllobal data              ////
 GameData data = initGameData();
 
-void GameUpdateAndRender(double deltaTime, InputState inputState, std::vector<QuadRenderData>& RenderQueue, uint32_t* AudioQueue)
+void GameUpdateAndRender(double deltaTime, Game& game, InputState inputState, std::vector<QuadRenderData>& RenderQueue, uint32_t* AudioQueue)
 {
 	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 
 	objectData& ball = data.ball;
 	objectData& player = data.player;
 
-	///////////// UPDATE POSITIONS ///////////////
-	if (inputState.r)
+	// pre input processing?
+	if (inputState.pause && !inputState.pauseProcessed)
 	{
-		// ballSpeedScale = 0.3f;
-		// ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-		// ballPosition = { 640 / 2.0f, 480 / 2.0f };
-		
-		float ballSpeedScale = 0.3f;
-		ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-		ball.position = { 640 / 2.0f, 480 / 2.0f };
-	}
-
-	// player position 
-	UpdatePlayerPosition(&player.position, inputState, (float)deltaTime);
-
-	// ball position
-	ball.position += ball.velocity * (float)deltaTime;
-
-	//////////////// PHYSICS REESOLUTION /////////////////
-	// Ball-Brick collision detection
-	float blockWidth = (float)windowWidth / (float)BlockCols;
-	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
-	for (int i = 0; i < levelBricks.size(); ++i)
-	{
-		if (*((int*)(data.gameLevel)+i) != 0)
+		switch (game.gameState)
 		{
-			Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
-			if (std::get<0>(collision))
-			{
-				UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-				data.gameLevel[i] = 0;
-				AudioQueue[0] = 1;
-			}
+		case GameState::ACTIVE:
+		{
+			game.gameState = GameState::MENU;
+			break;
+		}
+		case GameState::MENU:
+		{
+			game.gameState = GameState::ACTIVE;
+			break;
+		}
 		}
 	}
-
-	// Ball-wall collision detection
-	if (ball.position.x + ball.dimension.x > windowWidth)
+	if (!inputState.pause && inputState.pauseProcessed)
 	{
-		ball.velocity.x = -ball.velocity.x;
-		ball.position.x = windowWidth - ball.dimension.x;
-	}
-	else if (ball.position.y + ball.dimension.y > windowHeight)
-	{
-		ball.velocity.y = -ball.velocity.y;
-		ball.position.y = windowHeight - ball.dimension.y;
-	}
-	else if (ball.position.x < 0)
-	{
-		ball.velocity.x = -ball.velocity.x;
-		ball.position.x = 0;
-	}
-	else if (ball.position.y < 0)
-	{
-		ball.velocity = { 0.0f, 0.0f };
-		ball.position.y = 0;
+		inputState.pauseProcessed = false;
 	}
 
-	// ball-paddle collision detection
-	Collision collision = CheckCollision(ball.position, ball.dimension, player.position, player.dimension);
-	UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-	if (std::get<0>(collision))
+	// physics depending on state
+	switch (game.gameState)
 	{
-		AudioQueue[0] = 1;
+	case GameState::MENU:
+	{
+		printf("GAME PAUSED\r");
+		break;
 	}
-	glm::vec2 difference = std::get<2>(collision);
-	ball.velocity += 0.005 * glm::length(difference);
+	case GameState::ACTIVE:
+	{
+		///////////// UPDATE POSITIONS ///////////////////
+		if (inputState.reset)
+		{
+			// ballSpeedScale = 0.3f;
+			// ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+			// ballPosition = { 640 / 2.0f, 480 / 2.0f };
+
+			float ballSpeedScale = 0.3f;
+			ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+			ball.position = { 640 / 2.0f, 480 / 2.0f };
+		}
+
+		// player position 
+		UpdatePlayerPosition(&player.position, inputState, (float)deltaTime);
+
+		// ball position
+		ball.position += ball.velocity * (float)deltaTime;
+
+		//////////////// PHYSICS REESOLUTION /////////////////
+		// Ball-Brick collision detection
+		float blockWidth = (float)windowWidth / (float)BlockCols;
+		float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
+		for (int i = 0; i < levelBricks.size(); ++i)
+		{
+			if (*((int*)(data.gameLevel) + i) != 0)
+			{
+				Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
+				if (collision.hasCollided) // on collision
+				{
+					UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+					data.playerScore += data.gameLevel[i] * 10;
+					data.gameLevel[i] = 0;
+					AudioQueue[0] = 1;
+				}
+			}
+		}
+
+		// Ball-wall collision detection
+		if (ball.position.x + ball.dimension.x > windowWidth)
+		{
+			ball.velocity.x = -ball.velocity.x;
+			ball.position.x = windowWidth - ball.dimension.x;
+		}
+		else if (ball.position.y + ball.dimension.y > windowHeight)
+		{
+			ball.velocity.y = -ball.velocity.y;
+			ball.position.y = windowHeight - ball.dimension.y;
+		}
+		else if (ball.position.x < 0)
+		{
+			ball.velocity.x = -ball.velocity.x;
+			ball.position.x = 0;
+		}
+		else if (ball.position.y < 0)
+		{
+			ball.velocity = { 0.0f, 0.0f };
+			ball.position.y = 0;
+		}
+
+		// ball-paddle collision detection
+		Collision collision = CheckCollision(ball.position, ball.dimension, player.position, player.dimension);
+		UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+		if (collision.hasCollided)
+		{
+			AudioQueue[0] = 1;
+			// this is essentially the command pattern, the command pattern states that you're yield a command, in this case the render queue implicitly describes the function to be called
+			// the parameters then are the members of the command function essentially
+			// this contrasts to the original version where I'd immediately call the function
+			// separates when do do something with how to do it
+			glm::vec2 difference = collision.difference;
+			ball.velocity += 0.0005 * glm::length(difference);
+		}
+	}
+	}
+	
+
+	
 
 	//////////////////// DRAW PHASE /////////////////////////////////
 	// Draw Ball
@@ -264,17 +301,27 @@ void GameUpdateAndRender(double deltaTime, InputState inputState, std::vector<Qu
 	RenderQueue.push_back({ player.dimension, player.position, player.color });
 
 	// Draw Blocks
+	float blockWidth = (float)windowWidth / (float)BlockCols;
+	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
 	for (int rowIdx = 0; rowIdx < BlockRows; ++rowIdx)
 	{
 		for (int colIdx = 0; colIdx < BlockCols; ++colIdx)
 		{
+			// this is actually flyweight
+			/*
+				struct
+				{
+					glm::vec2 blockPos;
+					glm::vec2 blockDim;
+					int TileType;
+					glm::vec4 ColorSelect;
+				}
+			*/
 			glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
 			unsigned int TileType = data.gameLevel[rowIdx * BlockCols + colIdx];
-
 			glm::vec4 ColorSelected = Colors[TileType];
-
 			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected });
 		}
 	}
-
+	printf("SCORE: %d\r", data.playerScore);
 }

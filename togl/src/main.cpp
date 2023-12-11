@@ -14,7 +14,6 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 
-
 #include "breakout.cpp"
 
 float quadVertices[] =
@@ -31,6 +30,7 @@ unsigned int quadElementIndices[] =
 };
 
 bool running = true;
+Game gameState = {};
 InputState inputState = {};
 std::vector<QuadRenderData> RenderQueue;
 uint32_t AudioQueue[10];
@@ -225,7 +225,13 @@ bool UpdateInputState(InputState& inputstate)
 			}
 			case SDLK_r:
 			{
-				inputstate.r = true;
+				inputstate.reset = true;
+				break;
+			}
+			case SDLK_p:
+			{
+				inputstate.pause = true;
+				inputstate.pauseProcessed = false;
 				break;
 			}
 			}
@@ -258,7 +264,12 @@ bool UpdateInputState(InputState& inputstate)
 			}
 			case SDLK_r:
 			{
-				inputstate.r = false;
+				inputstate.reset = false;
+				break;
+			}
+			case SDLK_p:
+			{
+				inputstate.pause = false;
 				break;
 			}
 			}
@@ -346,7 +357,7 @@ int main(int argc, char** args)
 		running = UpdateInputState(inputState);
 
 		/////////////////////////// GAME UPDATE & Render //////////////////////////////////////////
-		GameUpdateAndRender(deltaTime, inputState, RenderQueue, AudioQueue);
+		GameUpdateAndRender(deltaTime, gameState, inputState, RenderQueue, AudioQueue);
 
 		for (QuadRenderData Data : RenderQueue)
 		{
