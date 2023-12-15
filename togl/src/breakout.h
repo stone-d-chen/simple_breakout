@@ -9,6 +9,7 @@ struct InputState
 	bool reset;
 	bool pause;
 
+
 	bool upProcessed;
 	bool downProcessed;
 	bool leftProcessed;
@@ -37,6 +38,14 @@ enum class GameState
 	ACTIVE = 0, MENU, WIN
 };
 
+struct GameData
+{
+	objectData ball;
+	objectData player;
+	int* gameLevel;
+	int playerScore = 0;
+};
+
 struct Game
 {
 	GameState gameState;
@@ -52,13 +61,7 @@ enum Direction
 	LEFT
 };
 
-struct GameData
-{
-	objectData ball;
-	objectData player;
-	int* gameLevel;
-	int playerScore = 0;
-};
+
 
 struct Collision
 {
@@ -66,3 +69,9 @@ struct Collision
 	Direction aabbCollisionSide;
 	glm::vec2 difference;
 };
+
+void RenderGame(std::vector<QuadRenderData>& RenderQueue, objectData& ball, objectData& player, unsigned int windowWidth, unsigned int windowHeight);
+
+void ProcessInput(InputState& inputState, Game& game);
+
+void SimulateGame(InputState& inputState, objectData& ball, objectData& player, double deltaTime, unsigned int windowWidth, unsigned int windowHeight, uint32_t* AudioQueue);

@@ -147,8 +147,7 @@ int gameLevel[] =
   3, 0, 4, 2, 1, 0,
 };
 
-GameData initGameData()
-{
+GameData initGameData() {
 	GameData result;
 
 	float ballSpeedScale = 0.3f;
@@ -173,126 +172,108 @@ GameData initGameData()
 
 	return result;
 }
-///   ////            gllobal data              ////
-GameData data = initGameData();
 
-void GameUpdateAndRender(double deltaTime, Game& game, InputState inputState, std::vector<QuadRenderData>& RenderQueue, uint32_t* AudioQueue)
+
+void ProcessInput(InputState& inputState, Game& game)
 {
-	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
-
-	objectData& ball = data.ball;
-	objectData& player = data.player;
-
 	// pre input processing?
-	if (inputState.pause && !inputState.pauseProcessed)
+	if (inputState.pause && !(inputState.pauseProcessed)	)
 	{
 		switch (game.gameState)
 		{
 		case GameState::ACTIVE:
 		{
 			game.gameState = GameState::MENU;
+			inputState.pauseProcessed = true;
 			break;
 		}
 		case GameState::MENU:
 		{
 			game.gameState = GameState::ACTIVE;
+			inputState.pauseProcessed = true;
 			break;
 		}
 		}
 	}
-	if (!inputState.pause && inputState.pauseProcessed)
+}
+GameData data = initGameData();
+
+void SimulateGame(InputState& inputState, objectData& ball, objectData& player, double deltaTime, uint32_t* AudioQueue)
+{
+	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
+	///////////// UPDATE POSITIONS ///////////////////
+	if (inputState.reset)
 	{
-		inputState.pauseProcessed = false;
+		float ballSpeedScale = 0.3f;
+		ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+		ball.position = { 640 / 2.0f, 480 / 2.0f };
 	}
 
-	// physics depending on state
-	switch (game.gameState)
+	// player position 
+	UpdatePlayerPosition(&player.position, inputState, (float)deltaTime);
+
+	// ball position
+	ball.position += ball.velocity * (float)deltaTime;
+
+	//////////////// PHYSICS REESOLUTION /////////////////
+	// Ball-Brick collision detection
+	float blockWidth = (float)windowWidth / (float)BlockCols;
+	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
+	for (int i = 0; i < levelBricks.size(); ++i)
 	{
-	case GameState::MENU:
-	{
-		printf("GAME PAUSED\r");
-		break;
-	}
-	case GameState::ACTIVE:
-	{
-		///////////// UPDATE POSITIONS ///////////////////
-		if (inputState.reset)
+		if (*((int*)(data.gameLevel) + i) != 0)
 		{
-			// ballSpeedScale = 0.3f;
-			// ballVelocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-			// ballPosition = { 640 / 2.0f, 480 / 2.0f };
-
-			float ballSpeedScale = 0.3f;
-			ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-			ball.position = { 640 / 2.0f, 480 / 2.0f };
-		}
-
-		// player position 
-		UpdatePlayerPosition(&player.position, inputState, (float)deltaTime);
-
-		// ball position
-		ball.position += ball.velocity * (float)deltaTime;
-
-		//////////////// PHYSICS REESOLUTION /////////////////
-		// Ball-Brick collision detection
-		float blockWidth = (float)windowWidth / (float)BlockCols;
-		float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
-		for (int i = 0; i < levelBricks.size(); ++i)
-		{
-			if (*((int*)(data.gameLevel) + i) != 0)
+			Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
+			if (collision.hasCollided) // on collision
 			{
-				Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
-				if (collision.hasCollided) // on collision
-				{
-					UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-					data.playerScore += data.gameLevel[i] * 10;
-					data.gameLevel[i] = 0;
-					AudioQueue[0] = 1;
-				}
+				UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+				data.playerScore += data.gameLevel[i] * 10;
+				data.gameLevel[i] = 0;
+				AudioQueue[0] = 1;
 			}
 		}
-
-		// Ball-wall collision detection
-		if (ball.position.x + ball.dimension.x > windowWidth)
-		{
-			ball.velocity.x = -ball.velocity.x;
-			ball.position.x = windowWidth - ball.dimension.x;
-		}
-		else if (ball.position.y + ball.dimension.y > windowHeight)
-		{
-			ball.velocity.y = -ball.velocity.y;
-			ball.position.y = windowHeight - ball.dimension.y;
-		}
-		else if (ball.position.x < 0)
-		{
-			ball.velocity.x = -ball.velocity.x;
-			ball.position.x = 0;
-		}
-		else if (ball.position.y < 0)
-		{
-			ball.velocity = { 0.0f, 0.0f };
-			ball.position.y = 0;
-		}
-
-		// ball-paddle collision detection
-		Collision collision = CheckCollision(ball.position, ball.dimension, player.position, player.dimension);
-		UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-		if (collision.hasCollided)
-		{
-			AudioQueue[0] = 1;
-			// this is essentially the command pattern, the command pattern states that you're yield a command, in this case the render queue implicitly describes the function to be called
-			// the parameters then are the members of the command function essentially
-			// this contrasts to the original version where I'd immediately call the function
-			// separates when do do something with how to do it
-			glm::vec2 difference = collision.difference;
-			ball.velocity += 0.0005 * glm::length(difference);
-		}
 	}
+
+	// Ball-wall collision detection
+	if (ball.position.x + ball.dimension.x > windowWidth)
+	{
+		ball.velocity.x = -ball.velocity.x;
+		ball.position.x = windowWidth - ball.dimension.x;
 	}
-	
+	else if (ball.position.y + ball.dimension.y > windowHeight)
+	{
+		ball.velocity.y = -ball.velocity.y;
+		ball.position.y = windowHeight - ball.dimension.y;
+	}
+	else if (ball.position.x < 0)
+	{
+		ball.velocity.x = -ball.velocity.x;
+		ball.position.x = 0;
+	}
+	else if (ball.position.y < 0)
+	{
+		ball.velocity = { 0.0f, 0.0f };
+		ball.position.y = 0;
+	}
 
-	
+	// ball-paddle collision detection
+	Collision collision = CheckCollision(ball.position, ball.dimension, player.position, player.dimension);
+	UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+	if (collision.hasCollided)
+	{
+		AudioQueue[0] = 1;
+		// this is essentially the command pattern, the command pattern states that you're yield a command, in this case the render queue implicitly describes the function to be called
+		// the parameters then are the members of the command function essentially
+		// this contrasts to the original version where I'd immediately call the function
+		// separates when do do something with how to do it
+		glm::vec2 difference = collision.difference;
+		ball.velocity += 0.0005 * glm::length(difference);
+	}
+}
 
+void RenderGame(std::vector<QuadRenderData>& RenderQueue, objectData ball, objectData player)
+{
+	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 	//////////////////// DRAW PHASE /////////////////////////////////
 	// Draw Ball
 	RenderQueue.push_back({ ball.dimension, ball.position, ball.color });
@@ -309,13 +290,13 @@ void GameUpdateAndRender(double deltaTime, Game& game, InputState inputState, st
 		{
 			// this is actually flyweight
 			/*
-				struct
-				{
-					glm::vec2 blockPos;
-					glm::vec2 blockDim;
-					int TileType;
-					glm::vec4 ColorSelect;
-				}
+			struct
+			{
+			glm::vec2 blockPos;
+			glm::vec2 blockDim;
+			int TileType;
+			glm::vec4 ColorSelect;
+			}
 			*/
 			glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
 			unsigned int TileType = data.gameLevel[rowIdx * BlockCols + colIdx];
@@ -324,4 +305,21 @@ void GameUpdateAndRender(double deltaTime, Game& game, InputState inputState, st
 		}
 	}
 	printf("SCORE: %d\r", data.playerScore);
+}
+
+//         global data              ////
+void GameUpdateAndRender(Game& game, InputState& inputState, std::vector<QuadRenderData>& RenderQueue, uint32_t* AudioQueue, double deltaTime)
+{
+
+	ProcessInput(inputState, game);
+
+	if (game.gameState == GameState::MENU)
+	{
+		printf("GAME PAUSED\r");
+	}
+	else if (game.gameState == GameState::ACTIVE)
+	{
+		SimulateGame(inputState, data.ball, data.player, deltaTime, AudioQueue);
+		RenderGame(RenderQueue, data.ball, data.player);
+	}
 }

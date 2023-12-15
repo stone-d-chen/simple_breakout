@@ -30,7 +30,7 @@ unsigned int quadElementIndices[] =
 };
 
 bool running = true;
-Game gameState = {};
+Game game = {};
 InputState inputState = {};
 std::vector<QuadRenderData> RenderQueue;
 uint32_t AudioQueue[10];
@@ -231,7 +231,6 @@ bool UpdateInputState(InputState& inputstate)
 			case SDLK_p:
 			{
 				inputstate.pause = true;
-				inputstate.pauseProcessed = false;
 				break;
 			}
 			}
@@ -279,7 +278,6 @@ bool UpdateInputState(InputState& inputstate)
 }
 
 
-#define MUS_PATH "bleep.wav"
 
 SDL_AudioDeviceID initSDLAudioDevice()
 {
@@ -356,8 +354,8 @@ int main(int argc, char** args)
 
 		running = UpdateInputState(inputState);
 
-		/////////////////////////// GAME UPDATE & Render //////////////////////////////////////////
-		GameUpdateAndRender(deltaTime, gameState, inputState, RenderQueue, AudioQueue);
+		/////////////////////////// GAME UPDATE & Render ////////////////////////////
+		GameUpdateAndRender(game, inputState, RenderQueue, AudioQueue, deltaTime);
 
 		for (QuadRenderData Data : RenderQueue)
 		{
