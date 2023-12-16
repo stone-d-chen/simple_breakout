@@ -1,5 +1,6 @@
 #include <SDL.h>
 #include <glad/glad.h>
+#include <SDL_ttf.h>
 
 #include <stdio.h>
 #include <iostream>
@@ -14,6 +15,10 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+#include "main.h"
 #include "breakout.cpp"
 
 float quadVertices[] =
@@ -35,6 +40,8 @@ InputState inputState = {};
 std::vector<QuadRenderData> RenderQueue;
 uint32_t AudioQueue[10];
 unsigned int windowWidth = 640, windowHeight = 480;
+
+int correct = TTF_Init();
 
 
 void GetOpenGLInfo()
@@ -72,6 +79,7 @@ void initSDLOpenGLBinding()
 
 	GetOpenGLInfo();
 }
+
 SDL_Window* initWindowing(const char* WindowName, int Width, int Height)
 {
 	SDL_Window* Window = initSDLOpenGLWindow("My Window", 800, 600);
@@ -167,14 +175,15 @@ unsigned int CreateVao(float* Vertices, size_t VertexArraySize , unsigned int* I
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, IndexArraySize, Indices, GL_STATIC_DRAW);
 
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 
 	glBindVertexArray(0);
 
 	return Vao;
 }
 
-void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, const glm::vec4 Color, unsigned int Vao, unsigned int modelLoc, unsigned int colorLoc)
+void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition,const glm::vec4 Color, unsigned int texture,
+						unsigned int Vao, unsigned int modelLoc, unsigned int colorLoc)
 {
 	glm::mat4 model = glm::mat4(1.0);
 	model = glm::translate(model, glm::vec3(pixelPosition, 0.0f));
@@ -183,9 +192,16 @@ void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, 
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	glUniform4fv(colorLoc, 1, glm::value_ptr(Color));
 
+	glBindTexture(GL_TEXTURE_2D, texture);
+
 	glBindVertexArray(Vao);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
+}
+
+void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, const glm::vec4 Color, unsigned int texture ,mainOGLContext context)
+{
+	DrawQuad(pixelDimensions, pixelPosition, Color, texture, context.Vao, context.modelLoc, context.colorLoc);
 }
 
 bool UpdateInputState(InputState& inputstate)
@@ -277,8 +293,6 @@ bool UpdateInputState(InputState& inputstate)
 	return true;
 }
 
-
-
 SDL_AudioDeviceID initSDLAudioDevice()
 {
 	if (SDL_Init(SDL_INIT_AUDIO) < 0)
@@ -322,23 +336,43 @@ int main(int argc, char** args)
 
 	// audio
 	SDL_AudioDeviceID audiodevice = initSDLAudioDevice();
-
 	SDLAudioData bleepaudio = SDLLoadWAV("C:\\repos\\togl\\togl\\src\\bleep.wav");
-
 	SDL_PauseAudioDevice(audiodevice, 0);
-
 
 	//shaders
 	ShaderProgramSource source = ParseShader("res/shaders/Sprite.shader");
 	unsigned int shaderProgram = CreateShaderProgram(source);
 
-	int modelLoc = glGetUniformLocation(shaderProgram, "model");
-	int projLoc = glGetUniformLocation(shaderProgram, "projection");
-	int colorLoc = glGetUniformLocation(shaderProgram, "TileColor");
-
-	unsigned int Vao = CreateVao(quadVertices, sizeof(quadVertices), quadElementIndices, sizeof(quadElementIndices));
+	// textures
+	unsigned int texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
 	
-	// PROJECTION
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	
+	int width, height, nrChannels;
+	
+	unsigned char* blockImage = stbi_load("res/textures/block.png", &width, &height, &nrChannels, 0);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, blockImage);
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+
+	int modelLoc = glGetUniformLocation(shaderProgram, "model");
+	int colorLoc = glGetUniformLocation(shaderProgram, "tileColor");
+	unsigned int Vao = CreateVao(quadVertices, sizeof(quadVertices), quadElementIndices, sizeof(quadElementIndices));
+
+	mainOGLContext oglContext = {};
+	oglContext.Vao = Vao;
+	oglContext.modelLoc = modelLoc;
+	oglContext.colorLoc = colorLoc;
+	
+	// GLOBAL PROJECTION
+	int projLoc = glGetUniformLocation(shaderProgram, "projection");
 	glm::mat4 projection = glm::ortho(0.0f,(float)windowWidth, 0.0f, (float)windowHeight, -1.0f, 1.0f);
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
@@ -359,7 +393,7 @@ int main(int argc, char** args)
 
 		for (QuadRenderData Data : RenderQueue)
 		{
-			DrawQuad(Data.pixelDimensions, Data.pixelPosition, Data.Color, Vao, modelLoc, colorLoc);
+			DrawQuad(Data.pixelDimensions, Data.pixelPosition, Data.Color, texture, oglContext);
 		}
 		RenderQueue.clear();
 
@@ -375,7 +409,6 @@ int main(int argc, char** args)
 
 		SDL_GL_SwapWindow(Window);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	}
 	return(0);
 }
