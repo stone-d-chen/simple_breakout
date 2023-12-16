@@ -157,6 +157,28 @@ unsigned int CreateShaderProgram(const ShaderProgramSource& source)
 	return shaderProgram;
 }
 
+unsigned int CreateTexture(const char* filename)
+{
+	unsigned int texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	int width, height, nrChannels;
+
+	unsigned char* image = stbi_load(filename, &width, &height, &nrChannels, 0);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	return texture;
+}
 
 unsigned int CreateVao(float* Vertices, size_t VertexArraySize , unsigned int* Indices, size_t IndexArraySize)
 {
@@ -344,33 +366,18 @@ int main(int argc, char** args)
 	unsigned int shaderProgram = CreateShaderProgram(source);
 
 	// textures
-	unsigned int texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	
-	int width, height, nrChannels;
-	
-	unsigned char* blockImage = stbi_load("res/textures/block.png", &width, &height, &nrChannels, 0);
+	unsigned int texture = CreateTexture("res/textures/block.png");
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, blockImage);
-	glGenerateMipmap(GL_TEXTURE_2D);
+	mainOGLContext oglContext = {}; {
+		int modelLoc = glGetUniformLocation(shaderProgram, "model");
+		int colorLoc = glGetUniformLocation(shaderProgram, "tileColor");
+		unsigned int Vao = CreateVao(quadVertices, sizeof(quadVertices), quadElementIndices, sizeof(quadElementIndices));
 
+		oglContext.Vao = Vao;
+		oglContext.modelLoc = modelLoc;
+		oglContext.colorLoc = colorLoc;
+	}
 
-	int modelLoc = glGetUniformLocation(shaderProgram, "model");
-	int colorLoc = glGetUniformLocation(shaderProgram, "tileColor");
-	unsigned int Vao = CreateVao(quadVertices, sizeof(quadVertices), quadElementIndices, sizeof(quadElementIndices));
-
-	mainOGLContext oglContext = {};
-	oglContext.Vao = Vao;
-	oglContext.modelLoc = modelLoc;
-	oglContext.colorLoc = colorLoc;
-	
 	// GLOBAL PROJECTION
 	int projLoc = glGetUniformLocation(shaderProgram, "projection");
 	glm::mat4 projection = glm::ortho(0.0f,(float)windowWidth, 0.0f, (float)windowHeight, -1.0f, 1.0f);
