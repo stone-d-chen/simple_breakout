@@ -110,8 +110,6 @@ void UpdatePlayerPosition(glm::vec2* playerPosition, InputState inputState, floa
 	*playerPosition += playerPositionDelta;
 }
 
-/////////////////////////////////////////
-
 // /// ///              Level init       /////////// 
 const int BlockRows = 3;
 const int BlockCols = 6;
