@@ -304,11 +304,16 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 	}
 	// DrawText("SCORE: %d\r", data.playerScore);
 	// really I would like a generalized renderer where I can pass an enum, so I can have a single queue
-
-
 	TextRenderQueue.push_back({ "Score: " + std::to_string(data.playerScore), { 100, 100 } });
 
 	printf("SCORE: %d\r", data.playerScore);
+}
+
+void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, uint32_t* AudioQueue, double deltaTime)
+{
+	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	TextRenderQueue.push_back({ "PAUSED" , {windowWidth/2, windowHeight/2 } });
 }
 
 //         global data              ////
@@ -320,6 +325,7 @@ void GameUpdateAndRender(Game& game, InputState& inputState, std::vector<QuadRen
 	if (game.gameState == GameState::MENU)
 	{
 		printf("GAME PAUSED\r");
+		RenderMenu(inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
 	}
 	else if (game.gameState == GameState::ACTIVE)
 	{

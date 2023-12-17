@@ -334,6 +334,7 @@ bool UpdateInputState(InputState& inputstate)
 			case SDLK_p:
 			{
 				inputstate.pause = false;
+				inputstate.pauseProcessed = false;
 				break;
 			}
 			}
@@ -429,7 +430,7 @@ int main(int argc, char** args)
 		running = UpdateInputState(inputState);
 
 		/////////////////////////// GAME UPDATE & Render ////////////////////////////
-		GameUpdateAndRender(game, inputState, RenderQueue, TextRenderQueue ,AudioQueue, deltaTime);
+		GameUpdateAndRender(game, inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
 
 		// Sprite Render Queue
 		for (QuadRenderData quadData : RenderQueue)
@@ -444,7 +445,9 @@ int main(int argc, char** args)
 			SDL_Surface* surfaceText = TTF_RenderUTF8_Blended(font, textData.text.c_str(), {255,255, 255});
 			SDL_Surface* surfaceRGBA = SDL_ConvertSurfaceFormat(surfaceText, SDL_PIXELFORMAT_ABGR8888, 0);
 			TextTextureInfo fonttexture = CreateTextTexture(surfaceRGBA, GL_RGBA);
-			DrawQuad({ fonttexture.width / 2, fonttexture.height / 2 }, textData.pixelPosition, { 1.0, 1.0, 1.0, 1.0 }, fonttexture.textureID, oglContext);
+																																		// draw centerd
+			DrawQuad({ fonttexture.width / 2, fonttexture.height / 2 }, textData.pixelPosition - glm::vec2{ fonttexture.width / 4, fonttexture.height / 4 }, {1.0, 1.0, 1.0, 1.0}, fonttexture.textureID, oglContext);
+			glDeleteTextures(1, &fonttexture.textureID);
 		}
 		TextRenderQueue.clear();
 
