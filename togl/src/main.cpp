@@ -38,6 +38,7 @@ bool running = true;
 Game game = {};
 InputState inputState = {};
 std::vector<QuadRenderData> RenderQueue;
+std::vector<TextRenderData> TextRenderQueue;
 uint32_t AudioQueue[10];
 unsigned int windowWidth = 640, windowHeight = 480;
 
@@ -394,17 +395,9 @@ int main(int argc, char** args)
 	// textures
 	unsigned int texture = CreateTexture("res/textures/block.png", GL_RGB);
 
-	// fonts
+	// Font Init
 	TTF_Init();
-
 	TTF_Font* font = TTF_OpenFont("res/fonts/Urbanist-Medium.ttf", 64);
-
-	SDL_Surface* surfaceText = TTF_RenderUTF8_Blended(font, "Breakout!", { 255,255, 255 });
-	SDL_Surface* surfaceRGBA = SDL_ConvertSurfaceFormat(surfaceText, SDL_PIXELFORMAT_ABGR8888, 0);
-
-	TextTextureInfo fonttexture = CreateTextTexture(surfaceRGBA, GL_RGBA);
-
-	
 
 
 	mainOGLContext oglContext = {};
@@ -436,14 +429,26 @@ int main(int argc, char** args)
 		running = UpdateInputState(inputState);
 
 		/////////////////////////// GAME UPDATE & Render ////////////////////////////
-		GameUpdateAndRender(game, inputState, RenderQueue, AudioQueue, deltaTime);
+		GameUpdateAndRender(game, inputState, RenderQueue, TextRenderQueue ,AudioQueue, deltaTime);
 
-		for (QuadRenderData Data : RenderQueue)
+		// Sprite Render Queue
+		for (QuadRenderData quadData : RenderQueue)
 		{
-			DrawQuad(Data.pixelDimensions, Data.pixelPosition, Data.Color, texture, oglContext);
+			DrawQuad(quadData.pixelDimensions, quadData.pixelPosition, quadData.Color, texture, oglContext);
 		}
 		RenderQueue.clear();
 
+		// Text Render Queue
+		for (TextRenderData textData : TextRenderQueue)
+		{
+			SDL_Surface* surfaceText = TTF_RenderUTF8_Blended(font, textData.text.c_str(), {255,255, 255});
+			SDL_Surface* surfaceRGBA = SDL_ConvertSurfaceFormat(surfaceText, SDL_PIXELFORMAT_ABGR8888, 0);
+			TextTextureInfo fonttexture = CreateTextTexture(surfaceRGBA, GL_RGBA);
+			DrawQuad({ fonttexture.width / 2, fonttexture.height / 2 }, textData.pixelPosition, { 1.0, 1.0, 1.0, 1.0 }, fonttexture.textureID, oglContext);
+		}
+		TextRenderQueue.clear();
+
+		// Audio "Queue"
 		if (AudioQueue[0] == 1)
 		{
 			SDL_QueueAudio(audiodevice, bleepaudio.WavBuffer, bleepaudio.WavSize);
@@ -454,8 +459,8 @@ int main(int argc, char** args)
 		}
 		AudioQueue[0] = 10;
 
-		DrawQuad({ fonttexture.width, fonttexture.height }, { 100, 100 }, { 1.0, 1.0, 1.0, 1.0 }, fonttexture.textureID, oglContext);
-	
+
+			
 		SDL_GL_SwapWindow(Window);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}

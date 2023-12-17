@@ -25,6 +25,12 @@ struct QuadRenderData
 	glm::vec4 Color;
 };
 
+struct TextRenderData
+{
+	std::string text;
+	glm::vec2 pixelPosition; // top left?
+};
+
 struct objectData
 {
 	glm::vec2 dimension;
@@ -60,8 +66,6 @@ enum Direction
 	DOWN,
 	LEFT
 };
-
-
 
 struct Collision
 {

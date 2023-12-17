@@ -269,7 +269,7 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 	}
 }
 
-void RenderGame(std::vector<QuadRenderData>& RenderQueue, objectData ball, objectData player)
+void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, objectData ball, objectData player)
 {
 	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 	//////////////////// DRAW PHASE /////////////////////////////////
@@ -302,11 +302,17 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, objectData ball, objec
 			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected });
 		}
 	}
+	// DrawText("SCORE: %d\r", data.playerScore);
+	// really I would like a generalized renderer where I can pass an enum, so I can have a single queue
+
+
+	TextRenderQueue.push_back({ "Score: " + std::to_string(data.playerScore), { 100, 100 } });
+
 	printf("SCORE: %d\r", data.playerScore);
 }
 
 //         global data              ////
-void GameUpdateAndRender(Game& game, InputState& inputState, std::vector<QuadRenderData>& RenderQueue, uint32_t* AudioQueue, double deltaTime)
+void GameUpdateAndRender(Game& game, InputState& inputState, std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, uint32_t* AudioQueue, double deltaTime)
 {
 
 	ProcessInput(inputState, game);
@@ -318,6 +324,6 @@ void GameUpdateAndRender(Game& game, InputState& inputState, std::vector<QuadRen
 	else if (game.gameState == GameState::ACTIVE)
 	{
 		SimulateGame(inputState, data.ball, data.player, deltaTime, AudioQueue);
-		RenderGame(RenderQueue, data.ball, data.player);
+		RenderGame(RenderQueue, TextRenderQueue, data.ball, data.player);
 	}
 }
