@@ -23,10 +23,10 @@
 
 float quadVertices[] =
 {
-	 0.0f,	0.0f, 0.0f,	0.0f,
-	 0.0f,	1.0f, 0.0f,	1.0f,
-	 1.0f,  1.0f, 1.0f,	1.0f,
-	 1.0f,  0.0f, 1.0f, 0.0f,
+	 0.0f,	0.0f, /* texture flip */ 0.0f, 1.0f,
+	 0.0f,	1.0f, /* texture flip */ 0.0f, 0.0f,
+	 1.0f,   1.0f, /* texture flip */ 1.0f, 0.0f,
+	 1.0f,   0.0f, /* texture flip */ 1.0f, 1.0f,
 };
 unsigned int quadElementIndices[] =
 {
@@ -76,6 +76,8 @@ void initSDLOpenGLBinding()
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	GetOpenGLInfo();
 }
@@ -157,7 +159,7 @@ unsigned int CreateShaderProgram(const ShaderProgramSource& source)
 	return shaderProgram;
 }
 
-unsigned int CreateTexture(const char* filename)
+unsigned int CreateTexture(const char* filename, int GLpixelFormat)
 {
 	unsigned int texture;
 	glGenTextures(1, &texture);
@@ -170,14 +172,38 @@ unsigned int CreateTexture(const char* filename)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	int width, height, nrChannels;
-
 	unsigned char* image = stbi_load(filename, &width, &height, &nrChannels, 0);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	glTexImage2D(GL_TEXTURE_2D, 0, nrChannels, width, height, 0, GLpixelFormat, GL_UNSIGNED_BYTE, image);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	return texture;
+}
+
+TextTextureInfo CreateTextTexture(SDL_Surface* surface, unsigned int GLpixelFormat)
+{
+	TextTextureInfo result = {};
+	unsigned int texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+	glTexImage2D(GL_TEXTURE_2D, 0, surface->format->BytesPerPixel, surface->w, surface->h, 0, GLpixelFormat, GL_UNSIGNED_BYTE, surface->pixels);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	result.textureID = texture;
+	result.width = surface->w;
+	result.height = surface->h;
+
+	return result;
 }
 
 unsigned int CreateVao(float* Vertices, size_t VertexArraySize , unsigned int* Indices, size_t IndexArraySize)
@@ -366,9 +392,23 @@ int main(int argc, char** args)
 	unsigned int shaderProgram = CreateShaderProgram(source);
 
 	// textures
-	unsigned int texture = CreateTexture("res/textures/block.png");
+	unsigned int texture = CreateTexture("res/textures/block.png", GL_RGB);
 
-	mainOGLContext oglContext = {}; {
+	// fonts
+	TTF_Init();
+
+	TTF_Font* font = TTF_OpenFont("res/fonts/Urbanist-Medium.ttf", 64);
+
+	SDL_Surface* surfaceText = TTF_RenderUTF8_Blended(font, "Breakout!", { 255,255, 255 });
+	SDL_Surface* surfaceRGBA = SDL_ConvertSurfaceFormat(surfaceText, SDL_PIXELFORMAT_ABGR8888, 0);
+
+	TextTextureInfo fonttexture = CreateTextTexture(surfaceRGBA, GL_RGBA);
+
+	
+
+
+	mainOGLContext oglContext = {};
+	{
 		int modelLoc = glGetUniformLocation(shaderProgram, "model");
 		int colorLoc = glGetUniformLocation(shaderProgram, "tileColor");
 		unsigned int Vao = CreateVao(quadVertices, sizeof(quadVertices), quadElementIndices, sizeof(quadElementIndices));
@@ -414,6 +454,8 @@ int main(int argc, char** args)
 		}
 		AudioQueue[0] = 10;
 
+		DrawQuad({ fonttexture.width, fonttexture.height }, { 100, 100 }, { 1.0, 1.0, 1.0, 1.0 }, fonttexture.textureID, oglContext);
+	
 		SDL_GL_SwapWindow(Window);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
