@@ -1,6 +1,7 @@
 #include <SDL.h>
 #include <glad/glad.h>
 #include <SDL_ttf.h>
+#include <SDL_mixer.h>
 
 #include <stdio.h>
 #include <iostream>
@@ -21,6 +22,7 @@
 #include "main.h"
 #include "breakout.cpp"
 
+// GLOBALS 
 float quadVertices[] =
 {
 	 0.0f,	0.0f, /* texture flip */ 0.0f, 1.0f,
@@ -42,8 +44,6 @@ std::vector<TextRenderData> TextRenderQueue;
 uint32_t AudioQueue[10];
 unsigned int windowWidth = 640, windowHeight = 480;
 
-int correct = TTF_Init();
-
 
 void GetOpenGLInfo()
 {
@@ -62,7 +62,6 @@ SDL_Window* initSDLOpenGLWindow(const char* WindowName, int Width, int Height)
 		Width, Height,
 		SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
 	SDL_GLContext Context = SDL_GL_CreateContext(Window);
-
 
 	return Window;
 }
@@ -388,6 +387,11 @@ int main(int argc, char** args)
 	SDL_AudioDeviceID audiodevice = initSDLAudioDevice();
 	SDLAudioData bleepaudio = SDLLoadWAV("C:\\repos\\togl\\togl\\src\\bleep.wav");
 	SDL_PauseAudioDevice(audiodevice, 0);
+	SDL_AudioSpec spec;
+	Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 2048);
+	Mix_Chunk* bleep = Mix_LoadWAV("C:\\repos\\togl\\togl\\src\\bleep.wav");
+	Mix_PlayChannel(-1, bleep, 0);
+	//Mix_PlayChannel(-1, bleep, 0);
 
 	//shaders
 	ShaderProgramSource source = ParseShader("res/shaders/Sprite.shader");
@@ -454,7 +458,8 @@ int main(int argc, char** args)
 		// Audio "Queue"
 		if (AudioQueue[0] == 1)
 		{
-			SDL_QueueAudio(audiodevice, bleepaudio.WavBuffer, bleepaudio.WavSize);
+			Mix_PlayChannel(-1, bleep, 0);
+			//SDL_QueueAudio(audiodevice, bleepaudio.WavBuffer, bleepaudio.WavSize);
 		}
 		else if((AudioQueue[0] == 2))
 		{

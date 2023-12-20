@@ -1,18 +1,8 @@
 #include "breakout.h"
-#include "SDL.h"
 
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
-
-glm::vec4 Colors[] =
-{
-	{ 0.0f, 0.0f, 0.0f, 0.0f },
-	{ 0.3f, 0.4f, 0.5f, 1.0f },
-	{ 0.0f, 0.4f, 0.0f, 1.0f },
-	{ 0.0f, 0.0f, 0.5f, 1.0f },
-	{ 0.3f, 0.0f, 0.5f, 1.0f },
-};
 
 //////////////// COLLISION /////////////////////////
 
@@ -111,6 +101,19 @@ void UpdatePlayerPosition(glm::vec2* playerPosition, InputState inputState, floa
 }
 
 // /// ///              Level init       /////////// 
+
+
+glm::vec4 Colors[] =
+{
+	{ 0.0f, 0.0f, 0.0f, 0.0f },
+	{ 0.3f, 0.4f, 0.5f, 1.0f },
+	{ 0.0f, 0.4f, 0.0f, 1.0f },
+	{ 0.0f, 0.0f, 0.5f, 1.0f },
+	{ 0.3f, 0.0f, 0.5f, 1.0f },
+};
+
+
+
 const int BlockRows = 3;
 const int BlockCols = 6;
 
@@ -316,15 +319,13 @@ void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue
 	TextRenderQueue.push_back({ "PAUSED" , {windowWidth/2, windowHeight/2 } });
 }
 
-//         global data              ////
+// do I peel off this layer?
 void GameUpdateAndRender(Game& game, InputState& inputState, std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, uint32_t* AudioQueue, double deltaTime)
 {
-
 	ProcessInput(inputState, game);
 
 	if (game.gameState == GameState::MENU)
 	{
-		printf("GAME PAUSED\r");
 		RenderMenu(inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
 	}
 	else if (game.gameState == GameState::ACTIVE)

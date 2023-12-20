@@ -23,6 +23,7 @@ struct QuadRenderData
 	glm::vec2 pixelDimensions;
 	glm::vec2 pixelPosition;
 	glm::vec4 Color;
+	// map to texture?
 };
 
 struct TextRenderData
@@ -44,6 +45,8 @@ enum class GameState
 	ACTIVE = 0, MENU, WIN
 };
 
+
+// we're going to merge Game and GameData at some point
 struct GameData
 {
 	objectData ball;
