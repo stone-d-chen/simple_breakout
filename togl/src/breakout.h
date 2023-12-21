@@ -58,6 +58,7 @@ struct GameData
 struct Game
 {
 	GameState gameState;
+	GameData gameData;
 	InputState inputState;
 	bool running = true;
 };

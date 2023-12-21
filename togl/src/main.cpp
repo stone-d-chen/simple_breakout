@@ -84,7 +84,7 @@ void initSDLOpenGLBinding()
 
 SDL_Window* initWindowing(const char* WindowName, int Width, int Height)
 {
-	SDL_Window* Window = initSDLOpenGLWindow("My Window", 800, 600);
+	SDL_Window* Window = initSDLOpenGLWindow("My Window", Width, Height);
 	initSDLOpenGLBinding();
 
 	return Window;
@@ -342,7 +342,7 @@ bool UpdateInputState(InputState& inputstate)
 	return true;
 }
 
-void initSDLAudioDevice()
+void initSDLMixerAudio()
 {
 	if (SDL_Init(SDL_INIT_AUDIO) < 0)
 	{
@@ -376,10 +376,10 @@ SDLAudioData SDLLoadWAV(const char* filepath)
 int main(int argc, char** args)
 {
 	// window 
-	SDL_Window* Window = initWindowing("My Window", windowWidth, windowHeight);
+	SDL_Window* Window = initWindowing("My Window", 976, 720);
 
 	// audio
-	initSDLAudioDevice();
+	initSDLMixerAudio();
 	Mix_Chunk* bleep = Mix_LoadWAV("res/audio/bleep.wav");
 	Mix_Music* music = Mix_LoadMUS("res/audio/breakout.mp3");
 	Mix_PlayMusic(music, -1);
@@ -415,6 +415,9 @@ int main(int argc, char** args)
 	// MODEL
 	glm::mat4 model(1.0f);
 
+	// gamedata
+	game.gameData = initGameData();
+
 	uint64_t LAST = SDL_GetPerformanceCounter();
 	while (running)
 	{
@@ -440,7 +443,7 @@ int main(int argc, char** args)
 			SDL_Surface* surfaceText = TTF_RenderUTF8_Blended(font, textData.text.c_str(), {255,255, 255});
 			SDL_Surface* surfaceRGBA = SDL_ConvertSurfaceFormat(surfaceText, SDL_PIXELFORMAT_ABGR8888, 0);
 			TextTextureInfo fonttexture = CreateTextTexture(surfaceRGBA, GL_RGBA);
-																																		// draw centerd
+			// draw centerd
 			DrawQuad({ fonttexture.width / 2, fonttexture.height / 2 }, textData.pixelPosition - glm::vec2{ fonttexture.width / 4, fonttexture.height / 4 }, {1.0, 1.0, 1.0, 1.0}, fonttexture.textureID, oglContext);
 			glDeleteTextures(1, &fonttexture.textureID);
 		}

@@ -197,9 +197,9 @@ void ProcessInput(InputState& inputState, Game& game)
 		}
 	}
 }
-GameData data = initGameData();
 
-void SimulateGame(InputState& inputState, objectData& ball, objectData& player, double deltaTime, uint32_t* AudioQueue)
+void SimulateGame(InputState& inputState, objectData& ball, objectData& player, Game& game,
+	double deltaTime, uint32_t* AudioQueue)
 {
 	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 	///////////// UPDATE POSITIONS ///////////////////
@@ -222,14 +222,14 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
 	for (int i = 0; i < levelBricks.size(); ++i)
 	{
-		if (*((int*)(data.gameLevel) + i) != 0)
+		if (*((int*)(game.gameData.gameLevel) + i) != 0)
 		{
 			Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
 			if (collision.hasCollided) // on collision
 			{
 				UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-				data.playerScore += data.gameLevel[i] * 10;
-				data.gameLevel[i] = 0;
+				game.gameData.playerScore += game.gameData.gameLevel[i] * 10;
+				game.gameData.gameLevel[i] = 0;
 				AudioQueue[0] = 1;
 			}
 		}
@@ -272,7 +272,8 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 	}
 }
 
-void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, objectData ball, objectData player)
+void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue,
+	objectData ball, objectData player, int score, int* gameLevel)
 {
 	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 	//////////////////// DRAW PHASE /////////////////////////////////
@@ -300,16 +301,16 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 			}
 			*/
 			glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
-			unsigned int TileType = data.gameLevel[rowIdx * BlockCols + colIdx];
+			unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
 			glm::vec4 ColorSelected = Colors[TileType];
 			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected });
 		}
 	}
 	// DrawText("SCORE: %d\r", data.playerScore);
 	// really I would like a generalized renderer where I can pass an enum, so I can have a single queue
-	TextRenderQueue.push_back({ "Score: " + std::to_string(data.playerScore), { 100, 100 } });
+	TextRenderQueue.push_back({ "Score: " + std::to_string(score), { 100, 100 } });
 
-	printf("SCORE: %d\r", data.playerScore);
+	printf("SCORE: %d\r", score);
 }
 
 void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, uint32_t* AudioQueue, double deltaTime)
@@ -330,7 +331,8 @@ void GameUpdateAndRender(Game& game, InputState& inputState, std::vector<QuadRen
 	}
 	else if (game.gameState == GameState::ACTIVE)
 	{
-		SimulateGame(inputState, data.ball, data.player, deltaTime, AudioQueue);
-		RenderGame(RenderQueue, TextRenderQueue, data.ball, data.player);
+		SimulateGame(inputState, game.gameData.ball, game.gameData.player,game ,deltaTime, AudioQueue);
+		RenderGame(RenderQueue, TextRenderQueue, game.gameData.ball, game.gameData.player,
+			game.gameData.playerScore, game.gameData.gameLevel);
 	}
 }
