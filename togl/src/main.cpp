@@ -342,20 +342,15 @@ bool UpdateInputState(InputState& inputstate)
 	return true;
 }
 
-SDL_AudioDeviceID initSDLAudioDevice()
+void initSDLAudioDevice()
 {
 	if (SDL_Init(SDL_INIT_AUDIO) < 0)
 	{
 		printf(SDL_GetError());
 
 	}
-	SDL_AudioSpec wav_spec = {};
-	SDL_AudioDeviceID audiodevice = SDL_OpenAudioDevice(NULL, 0, &wav_spec, NULL, 0);
-	if (audiodevice == 0)
-	{
-		printf(SDL_GetError());
-	}
-	return audiodevice;
+	Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 2048);
+	return;
 }
 
 struct SDLAudioData
@@ -384,14 +379,10 @@ int main(int argc, char** args)
 	SDL_Window* Window = initWindowing("My Window", windowWidth, windowHeight);
 
 	// audio
-	SDL_AudioDeviceID audiodevice = initSDLAudioDevice();
-	SDLAudioData bleepaudio = SDLLoadWAV("C:\\repos\\togl\\togl\\src\\bleep.wav");
-	SDL_PauseAudioDevice(audiodevice, 0);
-	SDL_AudioSpec spec;
-	Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 2048);
-	Mix_Chunk* bleep = Mix_LoadWAV("C:\\repos\\togl\\togl\\src\\bleep.wav");
-	Mix_PlayChannel(-1, bleep, 0);
-	//Mix_PlayChannel(-1, bleep, 0);
+	initSDLAudioDevice();
+	Mix_Chunk* bleep = Mix_LoadWAV("res/audio/bleep.wav");
+	Mix_Music* music = Mix_LoadMUS("res/audio/breakout.mp3");
+	Mix_PlayMusic(music, -1);
 
 	//shaders
 	ShaderProgramSource source = ParseShader("res/shaders/Sprite.shader");
@@ -459,11 +450,9 @@ int main(int argc, char** args)
 		if (AudioQueue[0] == 1)
 		{
 			Mix_PlayChannel(-1, bleep, 0);
-			//SDL_QueueAudio(audiodevice, bleepaudio.WavBuffer, bleepaudio.WavSize);
 		}
 		else if((AudioQueue[0] == 2))
 		{
-			//SDL_QueueAudio(audiodevice, wav2_buffer, wav2_length);
 		}
 		AudioQueue[0] = 10;
 
