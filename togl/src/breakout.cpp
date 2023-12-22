@@ -100,18 +100,6 @@ void UpdatePlayerPosition(glm::vec2* playerPosition, InputState inputState, floa
 }
 
 // /// ///              Level init       /////////// 
-glm::vec4 Colors[] =
-{
-	{ 0.0f, 0.0f, 0.0f, 0.0f },
-	{ 0.3f, 0.4f, 0.5f, 1.0f },
-	{ 0.0f, 0.4f, 0.0f, 1.0f },
-	{ 0.0f, 0.0f, 0.5f, 1.0f },
-	{ 0.3f, 0.0f, 0.5f, 1.0f },
-};
-
-const int BlockRows = 3;
-const int BlockCols = 6;
-
 std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int BlockCols /*, windowWidth, windowHeight */)
 {
 	unsigned int windowWidth = 640, windowHeight = 480;
@@ -135,13 +123,6 @@ std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int
 }
 
 const std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, BlockCols);
-
-int gameLevel[] =
-{
-  0, 1, 2, 3, 4, 1,
-  2, 1, 0, 0, 1, 2,
-  3, 0, 4, 2, 1, 0,
-};
 
 GameState initGameState() {
 	GameState result;
@@ -252,6 +233,7 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 	{
 		ball.velocity = { 0.0f, 0.0f };
 		ball.position.y = 0;
+		gameState.playerLives -= 1;
 	}
 
 	// ball-paddle collision detection
@@ -305,8 +287,7 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 	}
 	// DrawText("SCORE: %d\r", data.playerScore);
 	// really I would like a generalized renderer where I can pass an enum, so I can have a single queue
-	TextRenderQueue.push_back({ "Score: " + std::to_string(score), { 100, 100 } });
-
+	TextRenderQueue.push_back({ "Score: " + std::to_string(score), { 100, 50 } });
 	printf("SCORE: %d\r", score);
 }
 
@@ -339,5 +320,10 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState, std::vect
 		SimulateGame(inputState, gameState.ball, gameState.player, gameState, deltaTime, AudioQueue);
 		RenderGame(RenderQueue, TextRenderQueue, gameState.ball, gameState.player,
 			gameState.playerScore, gameState.gameLevel);
+		TextRenderQueue.push_back({ "Lives: " + std::to_string(gameState.playerLives), {550, 50} });
+	}
+	if (gameState.playerLives <= 0)
+	{
+		gameState.mode = GameMode::MENU;
 	}
 }

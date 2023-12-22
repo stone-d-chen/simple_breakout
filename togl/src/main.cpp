@@ -1,5 +1,3 @@
-
-
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
@@ -7,9 +5,9 @@
 #include <sstream>
 #include <vector>
 
-#include <SDL.h>
 #include <glad/glad.h>
 #include "breakout.cpp"
+#include <SDL.h>
 #include <SDL_ttf.h>
 #include <SDL_mixer.h>
 
@@ -342,7 +340,7 @@ unsigned int PlatformCreateTexture(const char* filename, int pixelFormat) {
 int main(int argc, char** args)
 {
 	// window 
-	SDL_Window* Window = initWindowing("My Window", 976, 720);
+	SDL_Window* Window = initWindowing("Breakout", 960, 720);
 
 	// audio
 	initSDLMixerAudio();

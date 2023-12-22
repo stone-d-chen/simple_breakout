@@ -1,6 +1,26 @@
 #pragma once
 unsigned int PlatformCreateTexture(const char* filename, int pixelFormat);
 
+glm::vec4 Colors[] =
+{
+	{ 0.0f, 0.0f, 0.0f, 0.0f },
+	{ 0.3f, 0.4f, 0.5f, 1.0f },
+	{ 0.0f, 0.4f, 0.0f, 1.0f },
+	{ 0.0f, 0.0f, 0.5f, 1.0f },
+	{ 0.3f, 0.0f, 0.5f, 1.0f },
+};
+
+const int BlockRows = 3;
+const int BlockCols = 6;
+
+int gameLevel[] =
+{
+  0, 1, 2, 3, 4, 1,
+  2, 1, 0, 0, 1, 2,
+  3, 0, 4, 2, 1, 0,
+};
+
+
 struct InputState
 {
 	bool up;
