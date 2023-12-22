@@ -1,4 +1,5 @@
 #pragma once
+unsigned int PlatformCreateTexture(const char* filename);
 
 struct InputState
 {
@@ -17,35 +18,29 @@ struct InputState
 	bool pauseProcessed;
 };
 
-struct QuadRenderData
-{
+struct QuadRenderData {
 	glm::vec2 pixelDimensions;
 	glm::vec2 pixelPosition;
 	glm::vec4 Color;
-	// map to texture?
+	unsigned int textureId;
 };
 
-struct TextRenderData
-{
-	std::string text;
-	glm::vec2 pixelPosition; // top left?
-};
+struct TextRenderData { std::string text; glm::vec2 pixelPosition;/* top left  */ };
 
-struct objectData
-{
+struct objectData {
 	glm::vec2 dimension;
 	glm::vec4 color;
 	glm::vec2 position;
 	glm::vec2 velocity;
+	unsigned int textureId;
 };
 
 enum class GameMode { ACTIVE = 0, MENU, WIN };
-
-
 struct GameState
 {
+	bool initializedResources = false;
 	bool running = true;
-	GameMode mode;
+	GameMode mode = GameMode::ACTIVE;
 
 	objectData ball;
 	objectData player;
@@ -57,7 +52,6 @@ struct GameState
 };
 
 enum Direction { UP, RIGHT, DOWN, LEFT };
-
 struct Collision
 {
 	bool hasCollided;

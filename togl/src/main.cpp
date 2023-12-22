@@ -10,8 +10,6 @@
 #include <sstream>
 #include <vector>
 
-#include <tuple>
-
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
@@ -19,27 +17,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include "main.h"
 #include "breakout.cpp"
+#include "main.h"
 
-// GLOBALS 
-float quadVertices[] =
-{
-	 0.0f,	0.0f, /* texture flip */ 0.0f, 1.0f,
-	 0.0f,	1.0f, /* texture flip */ 0.0f, 0.0f,
-	 1.0f,   1.0f, /* texture flip */ 1.0f, 0.0f,
-	 1.0f,   0.0f, /* texture flip */ 1.0f, 1.0f,
-};
-unsigned int quadElementIndices[] =
-{
-	0,1,2,
-	0,2,3
-};
 
-bool running = true;
-std::vector<QuadRenderData> RenderQueue;
-std::vector<TextRenderData> TextRenderQueue;
-uint32_t AudioQueue[10];
 
 void GetOpenGLInfo()
 {
@@ -349,6 +330,11 @@ void initSDLMixerAudio()
 	return;
 }
 
+// calls TO platform FROM game
+unsigned int PlatformCreateTexture(const char* filename) {
+	return CreateTexture(filename, GL_RGB);
+}
+
 int main(int argc, char** args)
 {
 	// window 
@@ -365,7 +351,7 @@ int main(int argc, char** args)
 	unsigned int shaderProgram = CreateShaderProgram(source);
 
 	// textures
-	unsigned int texture = CreateTexture("res/textures/block.png", GL_RGB);
+	// unsigned int texture = CreateTexture("res/textures/block.png", GL_RGB);
 
 	// Font Init
 	TTF_Init();
@@ -410,7 +396,7 @@ int main(int argc, char** args)
 		// Sprite Render Queue
 		for (QuadRenderData quadData : RenderQueue)
 		{
-			DrawQuad(quadData.pixelDimensions, quadData.pixelPosition, quadData.Color, texture, oglContext);
+			DrawQuad(quadData.pixelDimensions, quadData.pixelPosition, quadData.Color, quadData.textureId, oglContext);
 		}
 		RenderQueue.clear();
 

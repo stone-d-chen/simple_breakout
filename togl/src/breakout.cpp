@@ -207,8 +207,7 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 {
 	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 	///////////// UPDATE POSITIONS ///////////////////
-	if (inputState.reset)
-	{
+	if (inputState.reset) {
 		float ballSpeedScale = 0.3f;
 		ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
 		ball.position = { 640 / 2.0f, 480 / 2.0f };
@@ -282,10 +281,10 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 	//////////////////// DRAW PHASE /////////////////////////////////
 	// Draw Ball
-	RenderQueue.push_back({ ball.dimension, ball.position, ball.color });
+	RenderQueue.push_back({ ball.dimension, ball.position, ball.color, ball.textureId });
 
 	// Draw Player
-	RenderQueue.push_back({ player.dimension, player.position, player.color });
+	RenderQueue.push_back({ player.dimension, player.position, player.color, ball.textureId });
 
 	// Draw Blocks
 	float blockWidth = (float)windowWidth / (float)BlockCols;
@@ -307,7 +306,7 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 			glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
 			unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
 			glm::vec4 ColorSelected = Colors[TileType];
-			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected });
+			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected, ball.textureId });
 		}
 	}
 	// DrawText("SCORE: %d\r", data.playerScore);
@@ -326,7 +325,12 @@ void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue
 
 // do I peel off this layer?
 void GameUpdateAndRender(GameState& gameState, InputState& inputState, std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, uint32_t* AudioQueue, double deltaTime)
-{
+{	
+	if (!gameState.initializedResources)
+	{
+		gameState.ball.textureId = PlatformCreateTexture("res/textures/block.png");
+		gameState.initializedResources = true;
+	}
 	ProcessInput(inputState, gameState);
 
 	if (gameState.mode == GameMode::MENU)
