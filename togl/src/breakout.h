@@ -1,6 +1,9 @@
 #pragma once
 unsigned int PlatformCreateTexture(const char* filename, int pixelFormat);
 
+const int worldWidth = 640; 
+const int worldHeight = 480;
+
 glm::vec4 Colors[] =
 {
 	{ 0.0f, 0.0f, 0.0f, 0.0f },
@@ -64,6 +67,7 @@ struct GameState
 
 	objectData ball;
 	objectData player;
+	objectData bricks;
 	int* gameLevel;
 	int playerScore = 0;
 	int playerLives = 3;

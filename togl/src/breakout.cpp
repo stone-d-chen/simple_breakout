@@ -100,21 +100,19 @@ void UpdatePlayerPosition(glm::vec2* playerPosition, InputState inputState, floa
 }
 
 // /// ///              Level init       /////////// 
-std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int BlockCols /*, windowWidth, windowHeight */)
+std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int BlockCols /*, worldWidth, worldHeight */)
 {
-	unsigned int windowWidth = 640, windowHeight = 480;
-
 	std::vector<glm::vec2> brickPositions;
 
-	float blockWidth = (float)windowWidth / (float)BlockCols;
-	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
+	float blockWidth = (float)worldWidth / (float)BlockCols;
+	float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
 
 	for (unsigned int rowIdx = 0; rowIdx < BlockRows; ++rowIdx)
 	{
 		for (unsigned int colIdx = 0; colIdx < BlockCols; ++colIdx)
 		{
 			float blockPositionX = colIdx * blockWidth;
-			float blockPositionY = windowHeight - (rowIdx + 1) * blockHeight;
+			float blockPositionY =  worldHeight - (rowIdx + 1) * blockHeight;
 
 			brickPositions.push_back({ blockPositionX, blockPositionY });
 		}
@@ -131,7 +129,7 @@ GameState initGameState() {
 	objectData ball =
 	{
 		{ 20.0f, 20.0f },
-		{ 0.0, 0.7, 0.0, 1.0 },
+		{ 1.0, 1.0, 1.0, 1.0 },
 		{ 640 / 2.0f, 480 / 2.0f },
 		{ 1.0f * ballSpeedScale, 1.0f * ballSpeedScale },
 	};
@@ -142,6 +140,7 @@ GameState initGameState() {
 		{ 640 / 2.0f , 480 * 1.0 / 10.0f },
 		{},
 	};
+	objectData bricks = {};
 
 	bool running = true;
 	result.ball = ball;
@@ -180,7 +179,6 @@ void ProcessInput(InputState& inputState, GameState& gameState)
 void SimulateGame(InputState& inputState, objectData& ball, objectData& player, GameState& gameState,
 	double deltaTime, uint32_t* AudioQueue)
 {
-	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 	///////////// UPDATE POSITIONS ///////////////////
 	if (inputState.reset) {
 		float ballSpeedScale = 0.3f;
@@ -196,8 +194,8 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 
 	//////////////// PHYSICS REESOLUTION /////////////////
 	// Ball-Brick collision detection
-	float blockWidth = (float)windowWidth / (float)BlockCols;
-	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
+	float blockWidth = (float)worldWidth / (float)BlockCols;
+	float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
 	for (int i = 0; i < levelBricks.size(); ++i)
 	{
 		if (*((int*)(gameState.gameLevel) + i) != 0)
@@ -214,15 +212,15 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 	}
 
 	// Ball-wall collision detection
-	if (ball.position.x + ball.dimension.x > windowWidth)
+	if (ball.position.x + ball.dimension.x > worldWidth)
 	{
 		ball.velocity.x = -ball.velocity.x;
-		ball.position.x = windowWidth - ball.dimension.x;
+		ball.position.x = worldWidth - ball.dimension.x;
 	}
-	else if (ball.position.y + ball.dimension.y > windowHeight)
+	else if (ball.position.y + ball.dimension.y > worldHeight)
 	{
 		ball.velocity.y = -ball.velocity.y;
-		ball.position.y = windowHeight - ball.dimension.y;
+		ball.position.y = worldHeight - ball.dimension.y;
 	}
 	else if (ball.position.x < 0)
 	{
@@ -252,9 +250,8 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 }
 
 void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue,
-	objectData ball, objectData player, int score, int* gameLevel)
+	objectData ball, objectData player, objectData bricks, int score, int* gameLevel)
 {
-	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 	//////////////////// DRAW PHASE /////////////////////////////////
 	// Draw Ball
 	RenderQueue.push_back({ ball.dimension, ball.position, ball.color, ball.textureId });
@@ -263,8 +260,8 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 	RenderQueue.push_back({ player.dimension, player.position, player.color, player.textureId });
 
 	// Draw Blocks
-	float blockWidth = (float)windowWidth / (float)BlockCols;
-	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
+	float blockWidth = (float)worldWidth / (float)BlockCols;
+	float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
 	for (int rowIdx = 0; rowIdx < BlockRows; ++rowIdx)
 	{
 		for (int colIdx = 0; colIdx < BlockCols; ++colIdx)
@@ -282,7 +279,7 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 			glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
 			unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
 			glm::vec4 ColorSelected = Colors[TileType];
-			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected, ball.textureId });
+			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected, bricks.textureId });
 		}
 	}
 	// DrawText("SCORE: %d\r", data.playerScore);
@@ -294,9 +291,8 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, uint32_t* AudioQueue, double deltaTime)
 {
 	// @todo remove opengl stuff
-	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	TextRenderQueue.push_back({ "PAUSED" , {windowWidth/2, windowHeight/2 } });
+	TextRenderQueue.push_back({ "PAUSED" , {worldWidth/2, worldHeight/2 } });
 }
 
 // do I peel off this layer?
@@ -305,12 +301,17 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState, std::vect
 	if (!gameState.initializedResources)
 	{
 		// 0 = GL_RGB, 1 = GL_RGBA;
-		gameState.ball.textureId = PlatformCreateTexture("res/textures/block.png", 0);
+		gameState.bricks.textureId = PlatformCreateTexture("res/textures/block.png", 0);
+		gameState.ball.textureId = PlatformCreateTexture("res/textures/ball.png", 1);
 		gameState.player.textureId = PlatformCreateTexture("res/textures/paddle.png", 1);
 		gameState.initializedResources = true;
 	}
 	ProcessInput(inputState, gameState);
 
+	if (gameState.playerLives <= 0)
+	{
+		gameState.mode = GameMode::MENU;
+	}
 	if (gameState.mode == GameMode::MENU)
 	{
 		RenderMenu(inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
@@ -318,12 +319,8 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState, std::vect
 	else if (gameState.mode == GameMode::ACTIVE)
 	{
 		SimulateGame(inputState, gameState.ball, gameState.player, gameState, deltaTime, AudioQueue);
-		RenderGame(RenderQueue, TextRenderQueue, gameState.ball, gameState.player,
+		RenderGame(RenderQueue, TextRenderQueue, gameState.ball, gameState.player, gameState.bricks,
 			gameState.playerScore, gameState.gameLevel);
 		TextRenderQueue.push_back({ "Lives: " + std::to_string(gameState.playerLives), {550, 50} });
-	}
-	if (gameState.playerLives <= 0)
-	{
-		gameState.mode = GameMode::MENU;
 	}
 }
