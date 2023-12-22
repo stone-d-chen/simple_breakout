@@ -169,7 +169,7 @@ TextTextureInfo CreateTextTexture(SDL_Surface* surface, unsigned int GLpixelForm
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-
+	// surface was nullptr
 	glTexImage2D(GL_TEXTURE_2D, 0, surface->format->BytesPerPixel, surface->w, surface->h, 0, GLpixelFormat, GL_UNSIGNED_BYTE, surface->pixels);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -410,6 +410,8 @@ int main(int argc, char** args)
 			// draw centerd
 			DrawQuad({ fonttexture.width / 2, fonttexture.height / 2 }, textData.pixelPosition - glm::vec2{ fonttexture.width / 4, fonttexture.height / 4 }, {1.0, 1.0, 1.0, 1.0}, fonttexture.textureID, oglContext);
 			glDeleteTextures(1, &fonttexture.textureID);
+			SDL_FreeSurface(surfaceRGBA);
+			SDL_FreeSurface(surfaceText);
 		}
 		TextRenderQueue.clear();
 
