@@ -20,8 +20,6 @@
 #include "breakout.cpp"
 #include "main.h"
 
-
-
 void GetOpenGLInfo()
 {
 	std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
@@ -350,8 +348,7 @@ int main(int argc, char** args)
 	ShaderProgramSource source = ParseShader("res/shaders/Sprite.shader");
 	unsigned int shaderProgram = CreateShaderProgram(source);
 
-	// textures
-	// unsigned int texture = CreateTexture("res/textures/block.png", GL_RGB);
+	// textures now loaded in the platform via PlatformCreateTexture;
 
 	// Font Init
 	TTF_Init();
@@ -421,9 +418,7 @@ int main(int argc, char** args)
 		{
 		}
 		AudioQueue[0] = 10;
-
-
-			
+	
 		SDL_GL_SwapWindow(Window);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}

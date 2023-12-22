@@ -101,8 +101,6 @@ void UpdatePlayerPosition(glm::vec2* playerPosition, InputState inputState, floa
 }
 
 // /// ///              Level init       /////////// 
-
-
 glm::vec4 Colors[] =
 {
 	{ 0.0f, 0.0f, 0.0f, 0.0f },
@@ -111,8 +109,6 @@ glm::vec4 Colors[] =
 	{ 0.0f, 0.0f, 0.5f, 1.0f },
 	{ 0.3f, 0.0f, 0.5f, 1.0f },
 };
-
-
 
 const int BlockRows = 3;
 const int BlockCols = 6;
@@ -177,7 +173,6 @@ GameState initGameState() {
 
 	return result;
 }
-
 
 void ProcessInput(InputState& inputState, GameState& gameState)
 {
