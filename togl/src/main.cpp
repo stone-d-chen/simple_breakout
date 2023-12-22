@@ -1,7 +1,4 @@
-#include <SDL.h>
-#include <glad/glad.h>
-#include <SDL_ttf.h>
-#include <SDL_mixer.h>
+
 
 #include <stdio.h>
 #include <iostream>
@@ -10,6 +7,12 @@
 #include <sstream>
 #include <vector>
 
+#include <SDL.h>
+#include <glad/glad.h>
+#include "breakout.cpp"
+#include <SDL_ttf.h>
+#include <SDL_mixer.h>
+
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
@@ -17,7 +20,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include "breakout.cpp"
 #include "main.h"
 
 void GetOpenGLInfo()
@@ -329,8 +331,12 @@ void initSDLMixerAudio()
 }
 
 // calls TO platform FROM game
-unsigned int PlatformCreateTexture(const char* filename) {
-	return CreateTexture(filename, GL_RGB);
+unsigned int PlatformCreateTexture(const char* filename, int pixelFormat) {
+	if (pixelFormat == 0)
+	{
+		return CreateTexture(filename, GL_RGB);
+	}
+	return CreateTexture(filename, GL_RGBA);
 }
 
 int main(int argc, char** args)

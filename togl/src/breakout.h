@@ -1,5 +1,5 @@
 #pragma once
-unsigned int PlatformCreateTexture(const char* filename);
+unsigned int PlatformCreateTexture(const char* filename, int pixelFormat);
 
 struct InputState
 {

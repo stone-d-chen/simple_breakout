@@ -1,8 +1,7 @@
-#include "breakout.h"
-
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
+#include "breakout.h"
 
 //////////////// COLLISION /////////////////////////
 
@@ -158,7 +157,7 @@ GameState initGameState() {
 	objectData player =
 	{
 		{ 100.0f, 20.0f },
-		{ 1.0, 0.0, 0.0, 1.0 },
+		{ 3.0, 0.0, 0.0, 1.0 },
 		{ 640 / 2.0f , 480 * 1.0 / 10.0f },
 		{},
 	};
@@ -279,7 +278,7 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 	RenderQueue.push_back({ ball.dimension, ball.position, ball.color, ball.textureId });
 
 	// Draw Player
-	RenderQueue.push_back({ player.dimension, player.position, player.color, ball.textureId });
+	RenderQueue.push_back({ player.dimension, player.position, player.color, player.textureId });
 
 	// Draw Blocks
 	float blockWidth = (float)windowWidth / (float)BlockCols;
@@ -313,6 +312,7 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 
 void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, uint32_t* AudioQueue, double deltaTime)
 {
+	// @todo remove opengl stuff
 	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	TextRenderQueue.push_back({ "PAUSED" , {windowWidth/2, windowHeight/2 } });
@@ -323,7 +323,9 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState, std::vect
 {	
 	if (!gameState.initializedResources)
 	{
-		gameState.ball.textureId = PlatformCreateTexture("res/textures/block.png");
+		// 0 = GL_RGB, 1 = GL_RGBA;
+		gameState.ball.textureId = PlatformCreateTexture("res/textures/block.png", 0);
+		gameState.player.textureId = PlatformCreateTexture("res/textures/paddle.png", 1);
 		gameState.initializedResources = true;
 	}
 	ProcessInput(inputState, gameState);
