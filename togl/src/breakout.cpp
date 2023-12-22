@@ -148,8 +148,8 @@ int gameLevel[] =
   3, 0, 4, 2, 1, 0,
 };
 
-GameData initGameData() {
-	GameData result;
+GameState initGameState() {
+	GameState result;
 
 	float ballSpeedScale = 0.3f;
 	objectData ball =
@@ -167,30 +167,34 @@ GameData initGameData() {
 		{},
 	};
 
+	bool running = true;
 	result.ball = ball;
 	result.player = player;
 	result.gameLevel = gameLevel;
+	result.playerScore = 0;
+	result.playerLives = 3;
+	result.inputState = {};
 
 	return result;
 }
 
 
-void ProcessInput(InputState& inputState, Game& game)
+void ProcessInput(InputState& inputState, GameState& gameState)
 {
 	// pre input processing?
 	if (inputState.pause && !(inputState.pauseProcessed)	)
 	{
-		switch (game.gameState)
+		switch (gameState.mode)
 		{
-		case GameState::ACTIVE:
+		case GameMode::ACTIVE:
 		{
-			game.gameState = GameState::MENU;
+			gameState.mode = GameMode::MENU;
 			inputState.pauseProcessed = true;
 			break;
 		}
-		case GameState::MENU:
+		case GameMode::MENU:
 		{
-			game.gameState = GameState::ACTIVE;
+			gameState.mode = GameMode::ACTIVE;
 			inputState.pauseProcessed = true;
 			break;
 		}
@@ -198,7 +202,7 @@ void ProcessInput(InputState& inputState, Game& game)
 	}
 }
 
-void SimulateGame(InputState& inputState, objectData& ball, objectData& player, Game& game,
+void SimulateGame(InputState& inputState, objectData& ball, objectData& player, GameState& gameState,
 	double deltaTime, uint32_t* AudioQueue)
 {
 	unsigned int windowWidth = 640, windowHeight = 480; // @TODO: some hardcoded window stuff
@@ -222,14 +226,14 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 	float blockHeight = windowHeight / ((float)BlockRows * 3.0f);
 	for (int i = 0; i < levelBricks.size(); ++i)
 	{
-		if (*((int*)(game.gameData.gameLevel) + i) != 0)
+		if (*((int*)(gameState.gameLevel) + i) != 0)
 		{
 			Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
 			if (collision.hasCollided) // on collision
 			{
 				UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-				game.gameData.playerScore += game.gameData.gameLevel[i] * 10;
-				game.gameData.gameLevel[i] = 0;
+				gameState.playerScore += gameState.gameLevel[i] * 10;
+				gameState.gameLevel[i] = 0;
 				AudioQueue[0] = 1;
 			}
 		}
@@ -321,18 +325,18 @@ void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue
 }
 
 // do I peel off this layer?
-void GameUpdateAndRender(Game& game, InputState& inputState, std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, uint32_t* AudioQueue, double deltaTime)
+void GameUpdateAndRender(GameState& gameState, InputState& inputState, std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, uint32_t* AudioQueue, double deltaTime)
 {
-	ProcessInput(inputState, game);
+	ProcessInput(inputState, gameState);
 
-	if (game.gameState == GameState::MENU)
+	if (gameState.mode == GameMode::MENU)
 	{
 		RenderMenu(inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
 	}
-	else if (game.gameState == GameState::ACTIVE)
+	else if (gameState.mode == GameMode::ACTIVE)
 	{
-		SimulateGame(inputState, game.gameData.ball, game.gameData.player,game ,deltaTime, AudioQueue);
-		RenderGame(RenderQueue, TextRenderQueue, game.gameData.ball, game.gameData.player,
-			game.gameData.playerScore, game.gameData.gameLevel);
+		SimulateGame(inputState, gameState.ball, gameState.player, gameState, deltaTime, AudioQueue);
+		RenderGame(RenderQueue, TextRenderQueue, gameState.ball, gameState.player,
+			gameState.playerScore, gameState.gameLevel);
 	}
 }

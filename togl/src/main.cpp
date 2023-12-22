@@ -41,7 +41,6 @@ std::vector<QuadRenderData> RenderQueue;
 std::vector<TextRenderData> TextRenderQueue;
 uint32_t AudioQueue[10];
 
-
 void GetOpenGLInfo()
 {
 	std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
@@ -394,9 +393,7 @@ int main(int argc, char** args)
 	glm::mat4 model(1.0f);
 
 	// gamedata
-	Game game = {};
-	InputState inputState = {};
-	game.gameData = initGameData();
+	GameState gameState = initGameState();
 
 	uint64_t LAST = SDL_GetPerformanceCounter();
 	while (running)
@@ -405,10 +402,10 @@ int main(int argc, char** args)
 		double deltaTime = (double)((NOW - LAST) * 1000 / (double)SDL_GetPerformanceFrequency());
 		LAST = NOW;
 
-		running = UpdateInputState(inputState);
+		running = UpdateInputState(gameState.inputState);
 
 		/////////////////////////// GAME UPDATE & Render ////////////////////////////
-		GameUpdateAndRender(game, inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
+		GameUpdateAndRender(gameState, gameState.inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
 
 		// Sprite Render Queue
 		for (QuadRenderData quadData : RenderQueue)
