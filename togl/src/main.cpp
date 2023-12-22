@@ -37,12 +37,9 @@ unsigned int quadElementIndices[] =
 };
 
 bool running = true;
-Game game = {};
-InputState inputState = {};
 std::vector<QuadRenderData> RenderQueue;
 std::vector<TextRenderData> TextRenderQueue;
 uint32_t AudioQueue[10];
-unsigned int windowWidth = 640, windowHeight = 480;
 
 
 void GetOpenGLInfo()
@@ -353,26 +350,6 @@ void initSDLMixerAudio()
 	return;
 }
 
-struct SDLAudioData
-{
-	SDL_AudioSpec SDLSpec;
-	uint8_t* WavBuffer;
-	uint32_t WavSize;
-};
-
-SDLAudioData SDLLoadWAV(const char* filepath)
-{
-	SDLAudioData AudioData = {};
-	
-	if (SDL_LoadWAV("C:\\repos\\togl\\togl\\src\\solid.wav", &AudioData.SDLSpec, &AudioData.WavBuffer, &AudioData.WavSize) == NULL)
-	{
-		printf(SDL_GetError());
-		printf("\n");
-	}
-
-	return AudioData;
-}
-
 int main(int argc, char** args)
 {
 	// window 
@@ -380,7 +357,7 @@ int main(int argc, char** args)
 
 	// audio
 	initSDLMixerAudio();
-	Mix_Chunk* bleep = Mix_LoadWAV("res/audio/bleep.wav");
+	Mix_Chunk* bleep = Mix_LoadWAV("res/audio/solid.wav");
 	Mix_Music* music = Mix_LoadMUS("res/audio/breakout.mp3");
 	Mix_PlayMusic(music, -1);
 
@@ -408,6 +385,7 @@ int main(int argc, char** args)
 	}
 
 	// GLOBAL PROJECTION
+	unsigned int windowWidth = 640, windowHeight = 480;
 	int projLoc = glGetUniformLocation(shaderProgram, "projection");
 	glm::mat4 projection = glm::ortho(0.0f,(float)windowWidth, 0.0f, (float)windowHeight, -1.0f, 1.0f);
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
@@ -416,6 +394,8 @@ int main(int argc, char** args)
 	glm::mat4 model(1.0f);
 
 	// gamedata
+	Game game = {};
+	InputState inputState = {};
 	game.gameData = initGameData();
 
 	uint64_t LAST = SDL_GetPerformanceCounter();
