@@ -71,12 +71,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\repos\togl\togl\vendors\SDL2_mixer\include;C:\repos\togl\togl\vendors\SDL2_ttf\include;C:\repos\togl\togl\vendors\glm;C:\repos\togl\togl\vendors\SDL2\include;C:\repos\togl\togl\vendors\glad\include;C:\repos\togl\togl\vendors\stb_image;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\repos\togl\togl\vendors\SDL2_mixer\lib\x64;C:\repos\togl\togl\vendors\SDL2_ttf\lib;C:\repos\togl\togl\vendors\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)vendors\SDL2_mixer\include;$(ProjectDir)vendors\SDL2_ttf\include;$(ProjectDir)vendors\glm;$(ProjectDir)vendors\SDL2\include;$(ProjectDir)vendors\glad\include;$(ProjectDir)vendors\stb_image;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)vendors\SDL2_mixer\lib\x64;$(ProjectDir)vendors\SDL2_ttf\lib;$(ProjectDir)vendors\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\repos\togl\togl\vendors\SDL2_mixer\include;C:\repos\togl\togl\vendors\SDL2_ttf\include;C:\repos\togl\togl\vendors\glm;C:\repos\togl\togl\vendors\SDL2\include;C:\repos\togl\togl\vendors\glad\include;C:\repos\togl\togl\vendors\stb_image;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\repos\togl\togl\vendors\SDL2_mixer\lib\x64;C:\repos\togl\togl\vendors\SDL2_ttf\lib;C:\repos\togl\togl\vendors\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)vendors\SDL2_mixer\include;$(ProjectDir)vendors\SDL2_ttf\include;$(ProjectDir)vendors\glm;$(ProjectDir)vendors\SDL2\include;$(ProjectDir)vendors\glad\include;$(ProjectDir)vendors\stb_image;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)vendors\SDL2_mixer\lib\x64;$(ProjectDir)vendors\SDL2_ttf\lib;$(ProjectDir)vendors\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
