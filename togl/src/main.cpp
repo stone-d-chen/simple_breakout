@@ -337,6 +337,19 @@ unsigned int PlatformCreateTexture(const char* filename, int pixelFormat) {
 	return CreateTexture(filename, GL_RGBA);
 }
 
+void* PlatformLoadWAV(const char* filename)
+{
+	Mix_Chunk* sound = Mix_LoadWAV(filename);
+	return (void*)sound;
+}
+
+void* PlatformPlayMusic(const char* filename)
+{
+	Mix_Music* music = Mix_LoadMUS(filename);
+	Mix_PlayMusic(music, -1);
+	return (void*)music;
+}
+
 int main(int argc, char** args)
 {
 	// window 
@@ -344,9 +357,6 @@ int main(int argc, char** args)
 
 	// audio
 	initSDLMixerAudio();
-	Mix_Chunk* bleep = Mix_LoadWAV("res/audio/solid.wav");
-	Mix_Music* music = Mix_LoadMUS("res/audio/breakout.mp3");
-	Mix_PlayMusic(music, -1);
 
 	//shaders
 	ShaderProgramSource source = ParseShader("res/shaders/Sprite.shader");
@@ -416,14 +426,11 @@ int main(int argc, char** args)
 		TextRenderQueue.clear();
 
 		// Audio "Queue"
-		if (AudioQueue[0] == 1)
+		for (void* sound : AudioQueue)
 		{
-			Mix_PlayChannel(-1, bleep, 0);
+			Mix_PlayChannel(-1, (Mix_Chunk*)sound, 0);
 		}
-		else if((AudioQueue[0] == 2))
-		{
-		}
-		AudioQueue[0] = 10;
+		AudioQueue.clear();
 	
 		SDL_GL_SwapWindow(Window);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

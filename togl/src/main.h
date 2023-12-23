@@ -4,7 +4,7 @@
 bool running = true;
 std::vector<QuadRenderData> RenderQueue;
 std::vector<TextRenderData> TextRenderQueue;
-uint32_t AudioQueue[10];
+std::vector<void*> AudioQueue;
 
 float quadVertices[] = {
 	 0.0f,	0.0f, /* texture flip */ 0.0f, 1.0f,

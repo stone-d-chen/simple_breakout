@@ -1,5 +1,7 @@
 #pragma once
 unsigned int PlatformCreateTexture(const char* filename, int pixelFormat);
+void* PlatformLoadWAV(const char* filename);
+void* PlatformPlayMusic(const char* filename);
 
 const int worldWidth = 640; 
 const int worldHeight = 480;
@@ -68,6 +70,10 @@ struct GameState
 	objectData ball;
 	objectData player;
 	objectData bricks;
+
+	void* bleep;
+	void* music;
+
 	int* gameLevel;
 	int playerScore = 0;
 	int playerLives = 3;
@@ -83,8 +89,13 @@ struct Collision
 	glm::vec2 difference;
 };
 
-void RenderGame(std::vector<QuadRenderData>& RenderQueue, objectData& ball, objectData& player, unsigned int windowWidth, unsigned int windowHeight);
+void RenderGame(std::vector<QuadRenderData>& RenderQueue,
+	objectData& ball, objectData& player,
+	unsigned int windowWidth, unsigned int windowHeight);
 
 void ProcessInput(InputState& inputState, GameState& gameState);
 
-void SimulateGame(InputState& inputState, objectData& ball, objectData& player, double deltaTime, unsigned int windowWidth, unsigned int windowHeight, uint32_t* AudioQueue);
+void SimulateGame(InputState& inputState,
+	objectData& ball, objectData& player,
+	double deltaTime,
+	unsigned int windowWidth, unsigned int windowHeight, std::vector<void*> AudioQueue);

@@ -177,7 +177,7 @@ void ProcessInput(InputState& inputState, GameState& gameState)
 }
 
 void SimulateGame(InputState& inputState, objectData& ball, objectData& player, GameState& gameState,
-	double deltaTime, uint32_t* AudioQueue)
+	double deltaTime, std::vector<void*>& AudioQueue)
 {
 	///////////// UPDATE POSITIONS ///////////////////
 	if (inputState.reset) {
@@ -206,7 +206,7 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 				UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
 				gameState.playerScore += gameState.gameLevel[i] * 10;
 				gameState.gameLevel[i] = 0;
-				AudioQueue[0] = 1;
+				AudioQueue.push_back(gameState.bleep);
 			}
 		}
 	}
@@ -239,7 +239,7 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 	UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
 	if (collision.hasCollided)
 	{
-		AudioQueue[0] = 1;
+		AudioQueue.push_back(gameState.bleep);
 		// this is essentially the command pattern, the command pattern states that you're yield a command, in this case the render queue implicitly describes the function to be called
 		// the parameters then are the members of the command function essentially
 		// this contrasts to the original version where I'd immediately call the function
@@ -288,7 +288,8 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 	printf("SCORE: %d\r", score);
 }
 
-void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, uint32_t* AudioQueue, double deltaTime)
+void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue,
+	std::vector<TextRenderData>& TextRenderQueue, std::vector<void*>& AudioQueue, double deltaTime)
 {
 	// @todo remove opengl stuff
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -296,7 +297,9 @@ void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue
 }
 
 // do I peel off this layer?
-void GameUpdateAndRender(GameState& gameState, InputState& inputState, std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue, uint32_t* AudioQueue, double deltaTime)
+void GameUpdateAndRender(GameState& gameState, InputState& inputState,
+	std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue,
+	std::vector<void*>& AudioQueue, double deltaTime)
 {	
 	if (!gameState.initializedResources)
 	{
@@ -304,6 +307,10 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState, std::vect
 		gameState.bricks.textureId = PlatformCreateTexture("res/textures/block.png", 0);
 		gameState.ball.textureId = PlatformCreateTexture("res/textures/ball.png", 1);
 		gameState.player.textureId = PlatformCreateTexture("res/textures/paddle.png", 1);
+		
+		gameState.bleep = PlatformLoadWAV("res/audio/solid.wav");
+		gameState.music = PlatformPlayMusic("res/audio/breakout.mp3");
+
 		gameState.initializedResources = true;
 	}
 	ProcessInput(inputState, gameState);
@@ -314,6 +321,7 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState, std::vect
 	}
 	if (gameState.mode == GameMode::MENU)
 	{
+		TextRenderQueue.push_back({ "GAME OVER", {worldWidth / 2, worldHeight / 2 } });
 		RenderMenu(inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
 	}
 	else if (gameState.mode == GameMode::ACTIVE)
