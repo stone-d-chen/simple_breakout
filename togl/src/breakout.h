@@ -3,8 +3,6 @@ unsigned int PlatformCreateTexture(const char* filename, int pixelFormat);
 void* PlatformLoadWAV(const char* filename);
 void* PlatformPlayMusic(const char* filename);
 
-const int worldWidth = 640; 
-const int worldHeight = 480;
 
 glm::vec4 Colors[] =
 {
@@ -34,9 +32,10 @@ int gameLevel2[] =
 
 struct gameLevel
 {
-	int Rows;
-	int Cols;
-	int* LevelData;
+	int rows;
+	int cols;
+	int brickCount;
+	int* levelData;
 };
 
 struct InputState
@@ -47,6 +46,7 @@ struct InputState
 	bool right;
 	bool reset;
 	bool pause;
+	bool space;
 
 	bool upProcessed;
 	bool downProcessed;
@@ -54,6 +54,7 @@ struct InputState
 	bool rightProcessed;
 	bool resetProcessed;
 	bool pauseProcessed;
+	bool spaceProcessed;
 };
 
 struct QuadRenderData {
@@ -81,13 +82,13 @@ struct GameState
 	GameMode mode = GameMode::ACTIVE;
 
 	objectData ball;
+	bool ballOnPaddle = true;
 	objectData player;
 	objectData bricks;
 
 	int currentLevel = 0;
 
-	int* levels[2];
-	int  levelBlockCounts[2];
+	gameLevel levels[2];
 
 	void* bleep;
 	void* music;

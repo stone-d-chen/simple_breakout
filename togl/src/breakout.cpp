@@ -3,6 +3,9 @@
 #include <gtc/type_ptr.hpp>
 #include "breakout.h"
 
+static const int worldWidth = 640;
+static const int worldHeight = 480;
+
 //////////////// COLLISION /////////////////////////
 
 Direction VectorDirection(glm::vec2 target)
@@ -53,7 +56,7 @@ Collision CheckCollision(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::vec
 	result.difference = Difference;
 	result.aabbCollisionSide = VectorDirection(Difference);
 
-	if (glm::length(Difference) <= glm::length(dimensionOne * 0.5f))
+	if (glm::length(Difference) <= glm::length(dimensionOne.x * 0.5f))
 		result.hasCollided = true;
 	else
 		result.hasCollided = false;
@@ -128,14 +131,14 @@ GameState initGameState() {
 	float ballSpeedScale = 0.3f;
 	objectData ball =
 	{
-		{ 20.0f, 20.0f },
+		{ 15.0f, 15.0f },
 		{ 1.0, 1.0, 1.0, 1.0 },
 		{ 640 / 2.0f, 480 / 2.0f },
 		{ 1.0f * ballSpeedScale, 1.0f * ballSpeedScale },
 	};
 	objectData player =
 	{
-		{ 100.0f, 20.0f },
+		{ 128.0f / 1.5, 32.0f / 2 },
 		{ 3.0, 0.0, 0.0, 1.0 },
 		{ 640 / 2.0f , 480 * 1.0 / 10.0f },
 		{},
@@ -149,11 +152,10 @@ GameState initGameState() {
 	result.playerLives = 3;
 	result.inputState = {};
 
-	result.levels[0] = gameLevel1;
-	result.levels[1] = gameLevel2;
-	result.levelBlockCounts[0] = BlockRows * BlockCols;
-	result.levelBlockCounts[1] = BlockRows * BlockCols;
-
+	result.levels[0].levelData = gameLevel1;
+	result.levels[1].levelData = gameLevel2;
+	result.levels[0].brickCount = BlockRows * BlockCols;
+	result.levels[1].brickCount = BlockRows * BlockCols;
 
 	return result;
 }
@@ -179,6 +181,20 @@ void ProcessInput(InputState& inputState, GameState& gameState)
 		}
 		}
 	}
+	if (gameState.ballOnPaddle && inputState.space && !(inputState.spaceProcessed))
+	{
+		gameState.ballOnPaddle = false;
+		float ballSpeedScale = 0.3f;
+		gameState.ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+	}
+}
+
+glm::vec2 BallPositionToPaddleCenter(glm::vec2 ballPosition, glm::vec2 ballDimension, glm::vec2 paddlePosition, glm::vec2 paddleDimension)
+{
+	glm::vec3 result;
+	result.x = paddlePosition.x + 0.5f * paddleDimension.x - 0.5f * ballDimension.x;
+	result.y = paddlePosition.y + paddleDimension.y;
+	return result;
 }
 
 void SimulateGame(InputState& inputState, objectData& ball, objectData& player, GameState& gameState,
@@ -186,85 +202,87 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 {
 	///////////// UPDATE POSITIONS ///////////////////
 	if (inputState.reset) {
-		float ballSpeedScale = 0.3f;
+		gameState.ballOnPaddle = true;
+		ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
+		float ballSpeedScale = 0.0f;
 		ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-		ball.position = { 640 / 2.0f, 480 / 2.0f };
+	}
+	if (gameState.levels[gameState.currentLevel].brickCount == 0)
+	{
+		ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
+		float ballSpeedScale = 0.0f;
+		ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+		++gameState.currentLevel;
 	}
 
 	// player position 
 	UpdatePlayerPosition(&player.position, inputState, (float)deltaTime);
-
 	// ball position
-	ball.position += ball.velocity * (float)deltaTime;
-
-	if (gameState.levelBlockCounts[gameState.currentLevel] == 0)
+	if (gameState.ballOnPaddle == true)
 	{
-		++gameState.currentLevel;
+		ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
 	}
-
-	//////////////// PHYSICS RESOLUTION /////////////////
-	// Ball-Brick collision detection
-	float blockWidth = (float)worldWidth / (float)BlockCols;
-	float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
-	for (int i = 0; i < levelBricks.size(); ++i)
+	else
 	{
-		if (*((int*)(gameState.levels[gameState.currentLevel]) + i) != 0)
+		ball.position += ball.velocity * (float)deltaTime;
+
+		//////////////// PHYSICS RESOLUTION /////////////////
+		// Ball-Brick collision detection
+		float blockWidth = (float)worldWidth / (float)BlockCols;
+		float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
+		for (int i = 0; i < levelBricks.size(); ++i)
 		{
-			Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
-			if (collision.hasCollided) // on collision
+			if (*((int*)(gameState.levels[gameState.currentLevel].levelData) + i) != 0)
 			{
-				UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-				gameState.playerScore += gameState.levels[gameState.currentLevel][i] * 10;
-				gameState.levels[gameState.currentLevel][i] = 0;
-				AudioQueue.push_back(gameState.bleep);
-				--gameState.levelBlockCounts[gameState.currentLevel];
-				printf("Blocks Remaining: %d\n", gameState.levelBlockCounts[gameState.currentLevel]);
+				Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
+				if (collision.hasCollided) // on collision
+				{
+					UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+					gameState.playerScore += gameState.levels[gameState.currentLevel].levelData[i] * 10;
+					gameState.levels[gameState.currentLevel].levelData[i] = 0;
+					AudioQueue.push_back(gameState.bleep);
+					--gameState.levels[gameState.currentLevel].brickCount;
+				}
 			}
 		}
-	}
-	if (gameState.levelBlockCounts[gameState.currentLevel] == 0)
-	{
-		printf("Level Complete!\n");
-	}
 
-	// Ball-wall collision detection
-	if (ball.position.x + ball.dimension.x > worldWidth)
-	{
-		ball.velocity.x = -ball.velocity.x;
-		ball.position.x = worldWidth - ball.dimension.x;
-	}
-	else if (ball.position.y + ball.dimension.y > worldHeight)
-	{
-		ball.velocity.y = -ball.velocity.y;
-		ball.position.y = worldHeight - ball.dimension.y;
-	}
-	else if (ball.position.x < 0)
-	{
-		ball.velocity.x = -ball.velocity.x;
-		ball.position.x = 0;
-	}
-	else if (ball.position.y < 0)
-	{
-		ball.velocity = { 0.0f, 0.0f };
-		ball.position.y = 0;
-		gameState.playerLives -= 1;
-	}
+		// Ball-wall collision detection
+		if (ball.position.x + ball.dimension.x > worldWidth)
+		{
+			ball.velocity.x = -ball.velocity.x;
+			ball.position.x = worldWidth - ball.dimension.x;
+		}
+		else if (ball.position.y + ball.dimension.y > worldHeight)
+		{
+			ball.velocity.y = -ball.velocity.y;
+			ball.position.y = worldHeight - ball.dimension.y;
+		}
+		else if (ball.position.x < 0)
+		{
+			ball.velocity.x = -ball.velocity.x;
+			ball.position.x = 0;
+		}
+		else if (ball.position.y < 0)
+		{
+			ball.velocity = { 0.0f, 0.0f };
+			ball.position.y = 0;
+			gameState.playerLives -= 1;
+		}
 
-	// ball-paddle collision detection
-	Collision collision = CheckCollision(ball.position, ball.dimension, player.position, player.dimension);
-	UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-	if (collision.hasCollided)
-	{
-		AudioQueue.push_back(gameState.bleep);
-		// this is essentially the command pattern, the command pattern states that you're yield a command, in this case the render queue implicitly describes the function to be called
-		// the parameters then are the members of the command function essentially
-		// this contrasts to the original version where I'd immediately call the function
-		// separates when do do something with how to do it
-		glm::vec2 difference = collision.difference;
-		ball.velocity += 0.0005 * glm::length(difference);
-		
+		// ball-paddle collision detection
+		Collision collision = CheckCollision(ball.position, ball.dimension, player.position, player.dimension);
+		UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+		if (collision.hasCollided)
+		{
+			AudioQueue.push_back(gameState.bleep);
+			// this is essentially the command pattern, the command pattern states that you're yield a command, in this case the render queue implicitly describes the function to be called
+			// the parameters then are the members of the command function essentially
+			// this contrasts to the original version where I'd immediately call the function
+			// separates when do do something with how to do it
+			glm::vec2 difference = collision.difference;
+			ball.velocity += 0.001 * glm::length(difference.x);
+		}
 	}
-
 }
 
 void RenderGame(
@@ -272,13 +290,10 @@ void RenderGame(
 	objectData ball, objectData player, objectData bricks, int score,
 	int* gameLevel)
 {
-	//////////////////// DRAW PHASE /////////////////////////////////
 	// Draw Ball
 	RenderQueue.push_back({ ball.dimension, ball.position, ball.color, ball.textureId });
-
 	// Draw Player
 	RenderQueue.push_back({ player.dimension, player.position, player.color, player.textureId });
-
 	// Draw Blocks
 	float blockWidth = (float)worldWidth / (float)BlockCols;
 	float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
@@ -302,10 +317,8 @@ void RenderGame(
 			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected, bricks.textureId });
 		}
 	}
-	// DrawText("SCORE: %d\r", data.playerScore);
 	// really I would like a generalized renderer where I can pass an enum, so I can have a single queue
 	TextRenderQueue.push_back({ "Score: " + std::to_string(score), { 100, 50 } });
-	printf("SCORE: %d\r", score);
 }
 
 void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue,
@@ -348,7 +361,7 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 	{
 		SimulateGame(inputState, gameState.ball, gameState.player, gameState, deltaTime, AudioQueue);
 		RenderGame(RenderQueue, TextRenderQueue, gameState.ball, gameState.player, gameState.bricks,
-			gameState.playerScore, gameState.levels[gameState.currentLevel]);
+			gameState.playerScore, gameState.levels[gameState.currentLevel].levelData);
 		TextRenderQueue.push_back({ "Lives: " + std::to_string(gameState.playerLives), {550, 50} });
 	}
 }

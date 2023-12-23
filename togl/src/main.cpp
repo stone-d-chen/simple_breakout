@@ -272,6 +272,11 @@ bool UpdateInputState(InputState& inputstate)
 				inputstate.pause = true;
 				break;
 			}
+			case SDLK_SPACE:
+			{
+				inputstate.space = true;
+				break;
+			}
 			}
 		}
 		if (e.type == SDL_KEYUP)
@@ -310,6 +315,11 @@ bool UpdateInputState(InputState& inputstate)
 				inputstate.pause = false;
 				inputstate.pauseProcessed = false;
 				break;
+			}
+			case SDLK_SPACE:
+			{
+				inputstate.space = false;
+				inputstate.space = false;
 			}
 			}
 		}
