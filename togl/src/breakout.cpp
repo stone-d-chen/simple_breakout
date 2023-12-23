@@ -145,10 +145,15 @@ GameState initGameState() {
 	bool running = true;
 	result.ball = ball;
 	result.player = player;
-	result.gameLevel = gameLevel;
 	result.playerScore = 0;
 	result.playerLives = 3;
 	result.inputState = {};
+
+	result.levels[0] = gameLevel1;
+	result.levels[1] = gameLevel2;
+	result.levelBlockCounts[0] = BlockRows * BlockCols;
+	result.levelBlockCounts[1] = BlockRows * BlockCols;
+
 
 	return result;
 }
@@ -192,23 +197,34 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 	// ball position
 	ball.position += ball.velocity * (float)deltaTime;
 
-	//////////////// PHYSICS REESOLUTION /////////////////
+	if (gameState.levelBlockCounts[gameState.currentLevel] == 0)
+	{
+		++gameState.currentLevel;
+	}
+
+	//////////////// PHYSICS RESOLUTION /////////////////
 	// Ball-Brick collision detection
 	float blockWidth = (float)worldWidth / (float)BlockCols;
 	float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
 	for (int i = 0; i < levelBricks.size(); ++i)
 	{
-		if (*((int*)(gameState.gameLevel) + i) != 0)
+		if (*((int*)(gameState.levels[gameState.currentLevel]) + i) != 0)
 		{
 			Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
 			if (collision.hasCollided) // on collision
 			{
 				UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-				gameState.playerScore += gameState.gameLevel[i] * 10;
-				gameState.gameLevel[i] = 0;
+				gameState.playerScore += gameState.levels[gameState.currentLevel][i] * 10;
+				gameState.levels[gameState.currentLevel][i] = 0;
 				AudioQueue.push_back(gameState.bleep);
+				--gameState.levelBlockCounts[gameState.currentLevel];
+				printf("Blocks Remaining: %d\n", gameState.levelBlockCounts[gameState.currentLevel]);
 			}
 		}
+	}
+	if (gameState.levelBlockCounts[gameState.currentLevel] == 0)
+	{
+		printf("Level Complete!\n");
 	}
 
 	// Ball-wall collision detection
@@ -246,11 +262,15 @@ void SimulateGame(InputState& inputState, objectData& ball, objectData& player, 
 		// separates when do do something with how to do it
 		glm::vec2 difference = collision.difference;
 		ball.velocity += 0.0005 * glm::length(difference);
+		
 	}
+
 }
 
-void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue,
-	objectData ball, objectData player, objectData bricks, int score, int* gameLevel)
+void RenderGame(
+	std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue,
+	objectData ball, objectData player, objectData bricks, int score,
+	int* gameLevel)
 {
 	//////////////////// DRAW PHASE /////////////////////////////////
 	// Draw Ball
@@ -277,7 +297,7 @@ void RenderGame(std::vector<QuadRenderData>& RenderQueue, std::vector<TextRender
 			}
 			*/
 			glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
-			unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
+			unsigned int TileType = gameLevel [rowIdx * BlockCols + colIdx] ;
 			glm::vec4 ColorSelected = Colors[TileType];
 			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected, bricks.textureId });
 		}
@@ -328,7 +348,7 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 	{
 		SimulateGame(inputState, gameState.ball, gameState.player, gameState, deltaTime, AudioQueue);
 		RenderGame(RenderQueue, TextRenderQueue, gameState.ball, gameState.player, gameState.bricks,
-			gameState.playerScore, gameState.gameLevel);
+			gameState.playerScore, gameState.levels[gameState.currentLevel]);
 		TextRenderQueue.push_back({ "Lives: " + std::to_string(gameState.playerLives), {550, 50} });
 	}
 }

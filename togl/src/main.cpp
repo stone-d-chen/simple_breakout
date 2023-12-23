@@ -368,7 +368,6 @@ int main(int argc, char** args)
 	TTF_Init();
 	TTF_Font* font = TTF_OpenFont("res/fonts/Urbanist-Medium.ttf", 64);
 
-
 	mainOGLContext oglContext = {};
 	{
 		int modelLoc = glGetUniformLocation(shaderProgram, "model");

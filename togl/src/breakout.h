@@ -18,13 +18,26 @@ glm::vec4 Colors[] =
 const int BlockRows = 3;
 const int BlockCols = 6;
 
-int gameLevel[] =
+int gameLevel1[] =
 {
-  0, 1, 2, 3, 4, 1,
-  2, 1, 0, 0, 1, 2,
-  3, 0, 4, 2, 1, 0,
+  1, 1, 2, 3, 4, 1,
+  2, 1, 1, 1, 1, 2,
+  3, 1, 4, 2, 1, 1,
 };
 
+int gameLevel2[] =
+{
+	1, 1, 1, 1, 1, 1,
+	2, 2, 2, 2, 2, 2,
+	3, 3, 3, 3, 3, 3,
+};
+
+struct gameLevel
+{
+	int Rows;
+	int Cols;
+	int* LevelData;
+};
 
 struct InputState
 {
@@ -71,12 +84,16 @@ struct GameState
 	objectData player;
 	objectData bricks;
 
+	int currentLevel = 0;
+
+	int* levels[2];
+	int  levelBlockCounts[2];
+
 	void* bleep;
 	void* music;
 
-	int* gameLevel;
 	int playerScore = 0;
-	int playerLives = 3;
+	int playerLives = 10;
 
 	InputState inputState;
 };
