@@ -81,8 +81,7 @@ struct GameState
 	bool running = true;
 	GameMode mode = GameMode::ACTIVE;
 
-	objectData ball;
-	bool ballOnPaddle = true;
+	std::vector<Ball> balls;
 	objectData player;
 	objectData bricks;
 

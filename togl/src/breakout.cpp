@@ -146,7 +146,7 @@ GameState initGameState() {
 	objectData bricks = {};
 
 	bool running = true;
-	result.ball = ball;
+	result.balls.push_back(ball);
 	result.player = player;
 	result.playerScore = 0;
 	result.playerLives = 3;
@@ -160,35 +160,6 @@ GameState initGameState() {
 	return result;
 }
 
-void ProcessInput(InputState& inputState, GameState& gameState)
-{
-	// pre input processing?
-	if (inputState.pause && !(inputState.pauseProcessed)	)
-	{
-		switch (gameState.mode)
-		{
-		case GameMode::ACTIVE:
-		{
-			gameState.mode = GameMode::MENU;
-			inputState.pauseProcessed = true;
-			break;
-		}
-		case GameMode::MENU:
-		{
-			gameState.mode = GameMode::ACTIVE;
-			inputState.pauseProcessed = true;
-			break;
-		}
-		}
-	}
-	if (gameState.ballOnPaddle && inputState.space && !(inputState.spaceProcessed))
-	{
-		gameState.ballOnPaddle = false;
-		float ballSpeedScale = 0.3f;
-		gameState.ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-	}
-}
-
 glm::vec2 BallPositionToPaddleCenter(glm::vec2 ballPosition, glm::vec2 ballDimension, glm::vec2 paddlePosition, glm::vec2 paddleDimension)
 {
 	glm::vec3 result;
@@ -197,101 +168,115 @@ glm::vec2 BallPositionToPaddleCenter(glm::vec2 ballPosition, glm::vec2 ballDimen
 	return result;
 }
 
-void SimulateGame(InputState& inputState, objectData& ball, objectData& player, GameState& gameState,
+void SimulateGame(InputState& inputState /* ,objectData& ball*/, objectData& player, GameState& gameState,
 	double deltaTime, std::vector<void*>& AudioQueue)
 {
 	///////////// UPDATE POSITIONS ///////////////////
-	if (inputState.reset) {
-		gameState.ballOnPaddle = true;
-		ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
-		float ballSpeedScale = 0.0f;
-		ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-	}
-	if (gameState.levels[gameState.currentLevel].brickCount == 0)
-	{
-		ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
-		float ballSpeedScale = 0.0f;
-		ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
-		++gameState.currentLevel;
-	}
-
 	// player position 
 	UpdatePlayerPosition(&player.position, inputState, (float)deltaTime);
-	// ball position
-	if (gameState.ballOnPaddle == true)
-	{
-		ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
-	}
-	else
-	{
-		ball.position += ball.velocity * (float)deltaTime;
 
-		//////////////// PHYSICS RESOLUTION /////////////////
-		// Ball-Brick collision detection
-		float blockWidth = (float)worldWidth / (float)BlockCols;
-		float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
-		for (int i = 0; i < levelBricks.size(); ++i)
+	for (auto& ball : gameState.balls)
+	{
+		if (inputState.reset)
 		{
-			if (*((int*)(gameState.levels[gameState.currentLevel].levelData) + i) != 0)
+			ball.ballOnPaddle = true;
+			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
+			ball.velocity = { 0.0f , 0.0f };
+		}
+		if (gameState.levels[gameState.currentLevel].brickCount == 0)
+		{
+			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
+			ball.velocity = { 0.0f , 0.0f };
+			++gameState.currentLevel;
+		}
+		if (ball.ballOnPaddle && inputState.space && !(inputState.spaceProcessed))
+		{
+			ball.ballOnPaddle = false;
+			inputState.spaceProcessed = true;
+			float ballSpeedScale = 0.3f;
+			ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+		}
+		// ball position
+		if (ball.ballOnPaddle == true)
+		{
+			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
+		}
+
+		else
+		{
+			ball.position += ball.velocity * (float)deltaTime;
+
+			//////////////// PHYSICS RESOLUTION /////////////////
+			// Ball-Brick collision detection
+			float blockWidth = (float)worldWidth / (float)BlockCols;
+			float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
+			for (int i = 0; i < levelBricks.size(); ++i)
 			{
-				Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
-				if (collision.hasCollided) // on collision
+				if (*((int*)(gameState.levels[gameState.currentLevel].levelData) + i) != 0)
 				{
-					UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-					gameState.playerScore += gameState.levels[gameState.currentLevel].levelData[i] * 10;
-					gameState.levels[gameState.currentLevel].levelData[i] = 0;
-					AudioQueue.push_back(gameState.bleep);
-					--gameState.levels[gameState.currentLevel].brickCount;
+					Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
+					if (collision.hasCollided) // on collision
+					{
+						UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+						gameState.playerScore += gameState.levels[gameState.currentLevel].levelData[i] * 10;
+						gameState.levels[gameState.currentLevel].levelData[i] = 0;
+						AudioQueue.push_back(gameState.bleep);
+						--gameState.levels[gameState.currentLevel].brickCount;
+					}
 				}
 			}
-		}
 
-		// Ball-wall collision detection
-		if (ball.position.x + ball.dimension.x > worldWidth)
-		{
-			ball.velocity.x = -ball.velocity.x;
-			ball.position.x = worldWidth - ball.dimension.x;
-		}
-		else if (ball.position.y + ball.dimension.y > worldHeight)
-		{
-			ball.velocity.y = -ball.velocity.y;
-			ball.position.y = worldHeight - ball.dimension.y;
-		}
-		else if (ball.position.x < 0)
-		{
-			ball.velocity.x = -ball.velocity.x;
-			ball.position.x = 0;
-		}
-		else if (ball.position.y < 0)
-		{
-			ball.velocity = { 0.0f, 0.0f };
-			ball.position.y = 0;
-			gameState.playerLives -= 1;
-		}
+			// Ball-wall collision detection
+			if (ball.position.x + ball.dimension.x > worldWidth)
+			{
+				ball.velocity.x = -ball.velocity.x;
+				ball.position.x = worldWidth - ball.dimension.x;
+			}
+			else if (ball.position.y + ball.dimension.y > worldHeight)
+			{
+				ball.velocity.y = -ball.velocity.y;
+				ball.position.y = worldHeight - ball.dimension.y;
+			}
+			else if (ball.position.x < 0)
+			{
+				ball.velocity.x = -ball.velocity.x;
+				ball.position.x = 0;
+			}
+			else if (ball.position.y < 0)
+			{
+				ball.velocity = { 0.0f, 0.0f };
+				ball.position.y = 0;
+				gameState.playerLives -= 1;
+			}
 
-		// ball-paddle collision detection
-		Collision collision = CheckCollision(ball.position, ball.dimension, player.position, player.dimension);
-		UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-		if (collision.hasCollided)
-		{
-			AudioQueue.push_back(gameState.bleep);
-			// this is essentially the command pattern, the command pattern states that you're yield a command, in this case the render queue implicitly describes the function to be called
-			// the parameters then are the members of the command function essentially
-			// this contrasts to the original version where I'd immediately call the function
-			// separates when do do something with how to do it
-			glm::vec2 difference = collision.difference;
-			ball.velocity += 0.001 * glm::length(difference.x);
+			// ball-paddle collision detection
+			Collision collision = CheckCollision(ball.position, ball.dimension, player.position, player.dimension);
+			UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+			if (collision.hasCollided)
+			{
+				AudioQueue.push_back(gameState.bleep);
+				// this is essentially the command pattern, the command pattern states that you're yield a command, in this case the render queue implicitly describes the function to be called
+				// the parameters then are the members of the command function essentially
+				// this contrasts to the original version where I'd immediately call the function
+				// separates when do do something with how to do it
+				glm::vec2 difference = collision.difference;
+				ball.velocity += 0.001 * glm::length(difference.x);
+			}
 		}
 	}
 }
 
 void RenderGame(
 	std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue,
-	objectData ball, objectData player, objectData bricks, int score,
+	std::vector<Ball> balls, objectData player, objectData bricks, int score,
 	int* gameLevel)
 {
 	// Draw Ball
-	RenderQueue.push_back({ ball.dimension, ball.position, ball.color, ball.textureId });
+	for (auto& ball : balls)
+	{
+		RenderQueue.push_back({ ball.dimension, ball.position, ball.color, ball.textureId });
+	}
+
 	// Draw Player
 	RenderQueue.push_back({ player.dimension, player.position, player.color, player.textureId });
 	// Draw Blocks
@@ -329,6 +314,29 @@ void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue
 	TextRenderQueue.push_back({ "PAUSED" , {worldWidth/2, worldHeight/2 } });
 }
 
+void ProcessInput(InputState& inputState, GameState& gameState)
+{
+	// pre input processing?
+	if (inputState.pause && !(inputState.pauseProcessed))
+	{
+		switch (gameState.mode)
+		{
+		case GameMode::ACTIVE:
+		{
+			gameState.mode = GameMode::MENU;
+			inputState.pauseProcessed = true;
+			break;
+		}
+		case GameMode::MENU:
+		{
+			gameState.mode = GameMode::ACTIVE;
+			inputState.pauseProcessed = true;
+			break;
+		}
+		}
+	}
+}
+
 // do I peel off this layer?
 void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 	std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue,
@@ -338,7 +346,10 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 	{
 		// 0 = GL_RGB, 1 = GL_RGBA;
 		gameState.bricks.textureId = PlatformCreateTexture("res/textures/block.png", 0);
-		gameState.ball.textureId = PlatformCreateTexture("res/textures/ball.png", 1);
+		for (auto& ball : gameState.balls)
+		{
+			ball.textureId = PlatformCreateTexture("res/textures/ball.png", 1);
+		}
 		gameState.player.textureId = PlatformCreateTexture("res/textures/paddle.png", 1);
 		
 		gameState.bleep = PlatformLoadWAV("res/audio/solid.wav");
@@ -359,8 +370,8 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 	}
 	else if (gameState.mode == GameMode::ACTIVE)
 	{
-		SimulateGame(inputState, gameState.ball, gameState.player, gameState, deltaTime, AudioQueue);
-		RenderGame(RenderQueue, TextRenderQueue, gameState.ball, gameState.player, gameState.bricks,
+		SimulateGame(inputState, /* gameState.ball, */ gameState.player, gameState, deltaTime, AudioQueue);
+		RenderGame(RenderQueue, TextRenderQueue, gameState.balls, gameState.player, gameState.bricks,
 			gameState.playerScore, gameState.levels[gameState.currentLevel].levelData);
 		TextRenderQueue.push_back({ "Lives: " + std::to_string(gameState.playerLives), {550, 50} });
 	}

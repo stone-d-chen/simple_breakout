@@ -319,7 +319,7 @@ bool UpdateInputState(InputState& inputstate)
 			case SDLK_SPACE:
 			{
 				inputstate.space = false;
-				inputstate.space = false;
+				inputstate.spaceProcessed = false;
 			}
 			}
 		}
