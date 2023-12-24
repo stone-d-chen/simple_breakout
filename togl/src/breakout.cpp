@@ -128,18 +128,17 @@ const std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, Block
 GameState initGameState() {
 	GameState result;
 
-	float ballSpeedScale = 0.3f;
 	Ball ball =
 	{
 		true,
-		{ 1.0f * ballSpeedScale, 1.0f * ballSpeedScale },
+		{ 1.0f, 1.0f },
 		{ 15.0f, 15.0f },
 		{ 1.0, 1.0, 1.0, 1.0 },
 		{ 640 / 2.0f, 480 / 2.0f },
 	};
 	objectData player =
 	{
-		{},
+		{ 0.0f , 0.0f },
 		{ 128.0f / 1.5, 32.0f / 2 },
 		{ 3.0, 0.0, 0.0, 1.0 },
 		{ 640 / 2.0f , 480 * 1.0 / 10.0f },
@@ -167,7 +166,7 @@ glm::vec2 BallPositionToPaddleCenter(glm::vec2 ballPosition, glm::vec2 ballDimen
 	return result;
 }
 
-void SimulateGame(InputState& inputState /* ,objectData& ball*/, objectData& player, GameState& gameState,
+void SimulateGame(InputState& inputState, objectData& player, GameState& gameState,
 	double deltaTime, std::vector<void*>& AudioQueue)
 {
 	///////////// UPDATE POSITIONS ///////////////////
@@ -201,7 +200,7 @@ void SimulateGame(InputState& inputState /* ,objectData& ball*/, objectData& pla
 			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
 		}
 
-		else
+		else if (!inputState.reset)
 		{
 			ball.position += ball.velocity * (float)deltaTime;
 
@@ -369,7 +368,7 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 	}
 	else if (gameState.mode == GameMode::ACTIVE)
 	{
-		SimulateGame(inputState, /* gameState.ball, */ gameState.player, gameState, deltaTime, AudioQueue);
+		SimulateGame(inputState, gameState.player, gameState, deltaTime, AudioQueue);
 		RenderGame(RenderQueue, TextRenderQueue, gameState.balls, gameState.player, gameState.bricks,
 			gameState.playerScore, gameState.levels[gameState.currentLevel].levelData);
 		TextRenderQueue.push_back({ "Lives: " + std::to_string(gameState.playerLives), {550, 50} });
