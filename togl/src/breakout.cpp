@@ -160,7 +160,7 @@ GameState initGameState() {
 
 glm::vec2 BallPositionToPaddleCenter(glm::vec2 ballPosition, glm::vec2 ballDimension, glm::vec2 paddlePosition, glm::vec2 paddleDimension)
 {
-	glm::vec3 result;
+	glm::vec2 result;
 	result.x = paddlePosition.x + 0.5f * paddleDimension.x - 0.5f * ballDimension.x;
 	result.y = paddlePosition.y + paddleDimension.y;
 	return result;
@@ -197,7 +197,7 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 		// ball position
 		if (ball.ballOnPaddle == true)
 		{
-			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
+ 			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
 		}
 
 		else if (!inputState.reset)
@@ -220,6 +220,15 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 						gameState.levels[gameState.currentLevel].levelData[i] = 0;
 						AudioQueue.push_back(gameState.bleep);
 						--gameState.levels[gameState.currentLevel].brickCount;
+						if (gameState.levels[gameState.currentLevel].brickCount == 15)
+						{
+							Ball ball = {};
+							ball.dimension = { 15.0, 15.0f };
+							ball.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+							ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
+							ball.textureId = gameState.balls[0].textureId;
+							gameState.balls.push_back(ball);
+						}
 					}
 				}
 			}
@@ -269,7 +278,7 @@ void RenderGame(
 	std::vector<Ball> balls, objectData player, objectData bricks, int score,
 	int* gameLevel)
 {
-	// Draw Ball
+	// Draw Balls
 	for (auto& ball : balls)
 	{
 		RenderQueue.push_back({ ball.dimension, ball.position, ball.color, ball.textureId });
