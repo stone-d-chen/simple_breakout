@@ -275,7 +275,7 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 
 void RenderGame(
 	std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue,
-	std::vector<Ball> balls, objectData player, objectData bricks, int score,
+	std::vector<Ball> balls, objectData player, objectData bricks, int score, int lives,
 	int* gameLevel)
 {
 	// Draw Balls
@@ -310,16 +310,11 @@ void RenderGame(
 		}
 	}
 	// really I would like a generalized renderer where I can pass an enum, so I can have a single queue
+	TextRenderQueue.push_back({ "Lives: " + std::to_string(lives), {550, 50} });
 	TextRenderQueue.push_back({ "Score: " + std::to_string(score), { 100, 50 } });
 }
 
-void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue,
-	std::vector<TextRenderData>& TextRenderQueue, std::vector<void*>& AudioQueue, double deltaTime)
-{
-	// @todo remove opengl stuff
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	TextRenderQueue.push_back({ "PAUSED" , {worldWidth/2, worldHeight/2 } });
-}
+
 
 void ProcessInput(InputState& inputState, GameState& gameState)
 {
@@ -342,8 +337,59 @@ void ProcessInput(InputState& inputState, GameState& gameState)
 		}
 		}
 	}
+
+	if (gameState.playerLives <= 0)
+	{
+		gameState.mode = GameMode::LOSE;
+	}
 }
 
+void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue,
+	std::vector<TextRenderData>& TextRenderQueue, std::vector<void*>& AudioQueue, double deltaTime)
+{
+	static int selectedIndex = 0;
+	glm::vec4 selectedColor = { 0.2, 0.7, 0.9, 1.0f };
+	glm::vec4 unSelectedColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+	if (inputState.down && !(inputState.downProcessed))
+	{
+		selectedIndex = glm::clamp(selectedIndex + 1, 0, 1);
+		inputState.downProcessed = true;
+	}
+	else if (inputState.up && !(inputState.upProcessed))
+	{
+		selectedIndex = glm::clamp(selectedIndex - 1, 0, 1);
+		inputState.upProcessed = true;
+	}
+	const int menuItems = 2;
+	glm::vec4 menuColors[menuItems];
+	for (int i = 0; i < menuItems; ++i)
+	{
+		if (i == selectedIndex)
+			menuColors[i] = selectedColor;
+		else
+			menuColors[i] = unSelectedColor;
+	}
+	int yDim = worldHeight / 2;
+	int xDim = worldWidth / 2;
+	const int yDecrement = 50;
+	// @todo remove opengl stuff
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	TextRenderQueue.push_back({ "PAUSED" , { xDim, yDim } });
+	yDim -= yDecrement;
+	TextRenderQueue.push_back({ "Level Select: ", { xDim, yDim }, menuColors[0]});
+	yDim -= yDecrement;
+	TextRenderQueue.push_back({ "Quit", { xDim, yDim }, menuColors[1]});
+}
+void RenderGameOver(InputState& inputState, std::vector<QuadRenderData>& RenderQueue,
+	std::vector<TextRenderData>& TextRenderQueue, std::vector<void*>& AudioQueue, double deltaTime)
+{
+	int yDim = worldHeight / 2;
+	int xDim = worldWidth / 2;
+	// @todo remove opengl stuff
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
+	TextRenderQueue.push_back({ "GAME OVER", { xDim, yDim } });
+}
 // do I peel off this layer?
 void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 	std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue,
@@ -366,20 +412,21 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 	}
 	ProcessInput(inputState, gameState);
 
-	if (gameState.playerLives <= 0)
-	{
-		gameState.mode = GameMode::MENU;
-	}
+
 	if (gameState.mode == GameMode::MENU)
 	{
-		TextRenderQueue.push_back({ "GAME OVER", {worldWidth / 2, worldHeight / 2 } });
 		RenderMenu(inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
+	}
+	else if (gameState.mode == GameMode::LOSE)
+	{
+		RenderGameOver(inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
 	}
 	else if (gameState.mode == GameMode::ACTIVE)
 	{
 		SimulateGame(inputState, gameState.player, gameState, deltaTime, AudioQueue);
-		RenderGame(RenderQueue, TextRenderQueue, gameState.balls, gameState.player, gameState.bricks,
-			gameState.playerScore, gameState.levels[gameState.currentLevel].levelData);
-		TextRenderQueue.push_back({ "Lives: " + std::to_string(gameState.playerLives), {550, 50} });
+		RenderGame(RenderQueue, TextRenderQueue,
+			gameState.balls, gameState.player, gameState.bricks,
+			gameState.playerScore, gameState.playerLives,
+			gameState.levels[gameState.currentLevel].levelData);
 	}
 }

@@ -64,7 +64,11 @@ struct QuadRenderData {
 	unsigned int textureId;
 };
 
-struct TextRenderData { std::string text; glm::vec2 pixelPosition;/* top left  */ };
+struct TextRenderData {
+	std::string text;
+	glm::vec2 pixelPosition;
+	glm::vec4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
+};
 
 struct objectData {
 	glm::vec2 velocity;
@@ -84,7 +88,7 @@ struct Ball
 	unsigned int textureId;
 };
 
-enum class GameMode { ACTIVE = 0, MENU, WIN };
+enum class GameMode { ACTIVE = 0, MENU, WIN, LOSE };
 struct GameState
 {
 	bool initializedResources = false;

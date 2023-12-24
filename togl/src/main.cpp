@@ -292,11 +292,13 @@ bool UpdateInputState(InputState& inputstate)
 			{
 				// Up Arrow
 				inputstate.up = false;
+				inputstate.upProcessed = false;
 				break;
 			}
 			case SDLK_DOWN:
 			{
 				inputstate.down = false;
+				inputstate.downProcessed = false;
 				break;
 			}
 			case SDLK_LEFT:
@@ -432,7 +434,12 @@ int main(int argc, char** args)
 			SDL_Surface* surfaceRGBA = SDL_ConvertSurfaceFormat(surfaceText, SDL_PIXELFORMAT_ABGR8888, 0);
 			TextTextureInfo fonttexture = CreateTextTexture(surfaceRGBA, GL_RGBA);
 			// draw centerd
-			DrawQuad({ fonttexture.width / 2, fonttexture.height / 2 }, textData.pixelPosition - glm::vec2{ fonttexture.width / 4, fonttexture.height / 4 }, {1.0, 1.0, 1.0, 1.0}, fonttexture.textureID, oglContext);
+			DrawQuad({
+				fonttexture.width / 2, fonttexture.height / 2 },
+				textData.pixelPosition - glm::vec2{ fonttexture.width / 4, fonttexture.height / 4 },
+				textData.color,
+				fonttexture.textureID,
+				oglContext);
 			glDeleteTextures(1, &fonttexture.textureID);
 			SDL_FreeSurface(surfaceRGBA);
 			SDL_FreeSurface(surfaceText);
