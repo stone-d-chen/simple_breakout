@@ -129,32 +129,31 @@ GameState initGameState() {
 	GameState result;
 
 	float ballSpeedScale = 0.3f;
-	objectData ball =
+	Ball ball =
 	{
+		true,
+		{ 1.0f * ballSpeedScale, 1.0f * ballSpeedScale },
 		{ 15.0f, 15.0f },
 		{ 1.0, 1.0, 1.0, 1.0 },
 		{ 640 / 2.0f, 480 / 2.0f },
-		{ 1.0f * ballSpeedScale, 1.0f * ballSpeedScale },
 	};
 	objectData player =
 	{
+		{},
 		{ 128.0f / 1.5, 32.0f / 2 },
 		{ 3.0, 0.0, 0.0, 1.0 },
 		{ 640 / 2.0f , 480 * 1.0 / 10.0f },
-		{},
 	};
 	objectData bricks = {};
 
 	bool running = true;
 	result.balls.push_back(ball);
 	result.player = player;
-	result.playerScore = 0;
-	result.playerLives = 3;
 	result.inputState = {};
 
 	result.levels[0].levelData = gameLevel1;
-	result.levels[1].levelData = gameLevel2;
 	result.levels[0].brickCount = BlockRows * BlockCols;
+	result.levels[1].levelData = gameLevel2;
 	result.levels[1].brickCount = BlockRows * BlockCols;
 
 	return result;

@@ -26,6 +26,9 @@ void GetOpenGLInfo()
 	std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
 	std::cout << "Version: " << glGetString(GL_VERSION) << std::endl;
 	std::cout << "Shading Lang: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+	int MajorVersion;
+	SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &MajorVersion);
+	std::cout << "GET: " << MajorVersion << std::endl;
 }
 
 SDL_Window* initSDLOpenGLWindow(const char* WindowName, int Width, int Height)
@@ -44,11 +47,13 @@ SDL_Window* initSDLOpenGLWindow(const char* WindowName, int Width, int Height)
 void initSDLOpenGLBinding()
 {
 	gladLoadGLLoader(SDL_GL_GetProcAddress);
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -149,7 +154,7 @@ unsigned int CreateTexture(const char* filename, int GLpixelFormat)
 	int width, height, nrChannels;
 	unsigned char* image = stbi_load(filename, &width, &height, &nrChannels, 0);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, nrChannels, width, height, 0, GLpixelFormat, GL_UNSIGNED_BYTE, image);
+	glTexImage2D(GL_TEXTURE_2D, 0, nrChannels, width, height, 0, GLpixelFormat, GL_UNSIGNED_BYTE, (void*)image);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 

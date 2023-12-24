@@ -67,10 +67,20 @@ struct QuadRenderData {
 struct TextRenderData { std::string text; glm::vec2 pixelPosition;/* top left  */ };
 
 struct objectData {
+	glm::vec2 velocity;
 	glm::vec2 dimension;
 	glm::vec4 color;
 	glm::vec2 position;
+	unsigned int textureId;
+};
+
+struct Ball
+{
+	bool ballOnPaddle = true;
 	glm::vec2 velocity;
+	glm::vec2 dimension;
+	glm::vec4 color;
+	glm::vec2 position;
 	unsigned int textureId;
 };
 
@@ -93,7 +103,7 @@ struct GameState
 	void* music;
 
 	int playerScore = 0;
-	int playerLives = 10;
+	int playerLives = 3;
 
 	InputState inputState;
 };
