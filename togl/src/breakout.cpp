@@ -3,6 +3,8 @@
 #include <gtc/type_ptr.hpp>
 #include "breakout.h"
 
+#include <algorithm>
+
 static const int worldWidth = 640;
 static const int worldHeight = 480;
 
@@ -30,11 +32,13 @@ Direction VectorDirection(glm::vec2 target)
 	return (Direction)best_match;
 }
 
-bool AABBCollisionDetection(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::vec2 positionTwo, glm::vec2 dimensionTwo)
+Collision AABBCollisionDetection(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::vec2 positionTwo, glm::vec2 dimensionTwo)
 {
 	bool collisionX = (positionOne.x + dimensionOne.x >= positionTwo.x) && (positionOne.x <= positionTwo.x + dimensionTwo.x);
 	bool collisionY = (positionOne.y + dimensionOne.y >= positionTwo.y) && (positionOne.y <= positionTwo.y + dimensionTwo.y);
-	return collisionX && collisionY;
+	Collision collision = {};
+	collision.hasCollided = collisionX && collisionY;
+	return collision;
 }
 
 Collision CheckCollision(glm::vec2 positionOne, glm::vec2 dimensionOne, glm::vec2 positionTwo, glm::vec2 dimensionTwo) // AABB - Circle collision
@@ -131,7 +135,8 @@ GameState initGameState() {
 	Ball ball =
 	{
 		true,
-		{ 1.0f, 1.0f },
+		{0.0f},
+		{ 0.0f, 0.0f },
 		{ 15.0f, 15.0f },
 		{ 1.0, 1.0, 1.0, 1.0 },
 		{ 640 / 2.0f, 480 / 2.0f },
@@ -200,7 +205,7 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
  			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
 		}
 
-		else if (!inputState.reset)
+		else if (!inputState.reset && !ball.ballOnPaddle) // I removed the else if and introduced a bug which is very very annoying
 		{
 			ball.position += ball.velocity * (float)deltaTime;
 
@@ -220,15 +225,24 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 						gameState.levels[gameState.currentLevel].levelData[i] = 0;
 						AudioQueue.push_back(gameState.bleep);
 						--gameState.levels[gameState.currentLevel].brickCount;
-						if (gameState.levels[gameState.currentLevel].brickCount == 15)
-						{
-							Ball ball = {};
-							ball.dimension = { 15.0, 15.0f };
-							ball.color = { 1.0f, 1.0f, 1.0f, 1.0f };
-							ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
-							ball.textureId = gameState.balls[0].textureId;
-							gameState.balls.push_back(ball);
-						}
+
+						objectData powerup;
+						powerup.position = levelBricks[i];
+						powerup.dimension = { 30.0f, 30.0f };
+						powerup.velocity = { 0.0f, -0.1f };
+						powerup.color = { 0.0, 1.0f, 0.5, 1.0f };
+						powerup.textureId = gameState.bricks.textureId;
+						gameState.powerUps.push_back(powerup);
+
+						// if (gameState.levels[gameState.currentLevel].brickCount == 15)
+						// {
+						// 	Ball ball = {};
+						// 	ball.dimension = { 15.0, 15.0f };
+						// 	ball.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+						// 	ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
+						// 	ball.textureId = gameState.balls[0].textureId;
+						// 	gameState.balls.push_back(ball);
+						// }
 					}
 				}
 			}
@@ -271,6 +285,23 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 			}
 		}
 	}
+	
+	for (int i = 0; i < gameState.powerUps.size(); i++)
+	{
+		auto& powerup = gameState.powerUps[i];
+		powerup.position += powerup.velocity * (float)deltaTime;
+		Collision collision = AABBCollisionDetection(player.position, player.dimension, powerup.position, powerup.dimension);
+		if (collision.hasCollided)
+		{
+			powerup.position.y = 0;
+		}
+		if (powerup.position.y <= 0)
+		{
+			gameState.powerUps.erase(gameState.powerUps.begin() + i);
+		}
+
+	}
+
 }
 
 void RenderGame(
@@ -303,10 +334,13 @@ void RenderGame(
 			glm::vec4 ColorSelect;
 			}
 			*/
-			glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
-			unsigned int TileType = gameLevel [rowIdx * BlockCols + colIdx] ;
-			glm::vec4 ColorSelected = Colors[TileType];
-			RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected, bricks.textureId });
+			unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
+			if (TileType != 0)
+			{
+				glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
+				glm::vec4 ColorSelected = Colors[TileType];
+				RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected, bricks.textureId });
+			}
 		}
 	}
 	// really I would like a generalized renderer where I can pass an enum, so I can have a single queue
@@ -347,7 +381,7 @@ void ProcessInput(InputState& inputState, GameState& gameState)
 void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue,
 	std::vector<TextRenderData>& TextRenderQueue, std::vector<void*>& AudioQueue, double deltaTime)
 {
-	static int selectedIndex = 0;
+	static int selectedIndex = 0; // hmm is this a good way to go?
 	glm::vec4 selectedColor = { 0.2, 0.7, 0.9, 1.0f };
 	glm::vec4 unSelectedColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 

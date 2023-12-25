@@ -425,7 +425,12 @@ int main(int argc, char** args)
 		{
 			DrawQuad(quadData.pixelDimensions, quadData.pixelPosition, quadData.Color, quadData.textureId, oglContext);
 		}
+		for (auto object : gameState.powerUps)
+		{
+			DrawQuad(object.dimension, object.position, object.color, object.textureId, oglContext);
+		}
 		RenderQueue.clear();
+
 
 		// Text Render Queue
 		for (TextRenderData textData : TextRenderQueue)

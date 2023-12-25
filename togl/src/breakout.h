@@ -81,6 +81,7 @@ struct objectData {
 struct Ball
 {
 	bool ballOnPaddle = true;
+	float ballPassThrough = 0; // in ms
 	glm::vec2 velocity;
 	glm::vec2 dimension;
 	glm::vec4 color;
@@ -98,7 +99,7 @@ struct GameState
 	std::vector<Ball> balls;
 	objectData player;
 	objectData bricks;
-
+	std::vector<objectData> powerUps;
 	int currentLevel = 0;
 
 	gameLevel levels[2];
