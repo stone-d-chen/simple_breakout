@@ -186,12 +186,6 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
 			ball.velocity = { 0.0f , 0.0f };
 		}
-		if (gameState.levels[gameState.currentLevel].brickCount == 0)
-		{
-			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
-			ball.velocity = { 0.0f , 0.0f };
-			++gameState.currentLevel;
-		}
 		if (ball.ballOnPaddle && inputState.space && !(inputState.spaceProcessed))
 		{
 			ball.ballOnPaddle = false;
@@ -204,8 +198,12 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 		{
  			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
 		}
+		if (ball.ballPassThrough > 0)
+		{
+			ball.ballPassThrough -= (float)deltaTime;
+		}
 
-		else if (!inputState.reset && !ball.ballOnPaddle) // I removed the else if and introduced a bug which is very very annoying
+		if (!inputState.reset && !ball.ballOnPaddle) // I removed the else if and introduced a bug which is very very annoying
 		{
 			ball.position += ball.velocity * (float)deltaTime;
 
@@ -220,7 +218,10 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 					Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
 					if (collision.hasCollided) // on collision
 					{
-						UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+						if (ball.ballPassThrough <= 0)
+						{
+							UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+						}
 						gameState.playerScore += gameState.levels[gameState.currentLevel].levelData[i] * 10;
 						gameState.levels[gameState.currentLevel].levelData[i] = 0;
 						AudioQueue.push_back(gameState.bleep);
@@ -231,18 +232,8 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 						powerup.dimension = { 30.0f, 30.0f };
 						powerup.velocity = { 0.0f, -0.1f };
 						powerup.color = { 0.0, 1.0f, 0.5, 1.0f };
-						powerup.textureId = gameState.bricks.textureId;
+						powerup.textureId = gameState.powerupTextureId;
 						gameState.powerUps.push_back(powerup);
-
-						// if (gameState.levels[gameState.currentLevel].brickCount == 15)
-						// {
-						// 	Ball ball = {};
-						// 	ball.dimension = { 15.0, 15.0f };
-						// 	ball.color = { 1.0f, 1.0f, 1.0f, 1.0f };
-						// 	ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
-						// 	ball.textureId = gameState.balls[0].textureId;
-						// 	gameState.balls.push_back(ball);
-						// }
 					}
 				}
 			}
@@ -272,9 +263,9 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 
 			// ball-paddle collision detection
 			Collision collision = CheckCollision(ball.position, ball.dimension, player.position, player.dimension);
-			UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
 			if (collision.hasCollided)
 			{
+				UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
 				AudioQueue.push_back(gameState.bleep);
 				// this is essentially the command pattern, the command pattern states that you're yield a command, in this case the render queue implicitly describes the function to be called
 				// the parameters then are the members of the command function essentially
@@ -294,14 +285,14 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 		if (collision.hasCollided)
 		{
 			powerup.position.y = 0;
+			AudioQueue.push_back(gameState.powerSound);
+			for (auto& ball : gameState.balls)
+				ball.ballPassThrough = 3000;
 		}
 		if (powerup.position.y <= 0)
-		{
 			gameState.powerUps.erase(gameState.powerUps.begin() + i);
-		}
 
 	}
-
 }
 
 void RenderGame(
@@ -311,9 +302,7 @@ void RenderGame(
 {
 	// Draw Balls
 	for (auto& ball : balls)
-	{
 		RenderQueue.push_back({ ball.dimension, ball.position, ball.color, ball.textureId });
-	}
 
 	// Draw Player
 	RenderQueue.push_back({ player.dimension, player.position, player.color, player.textureId });
@@ -346,9 +335,8 @@ void RenderGame(
 	// really I would like a generalized renderer where I can pass an enum, so I can have a single queue
 	TextRenderQueue.push_back({ "Lives: " + std::to_string(lives), {550, 50} });
 	TextRenderQueue.push_back({ "Score: " + std::to_string(score), { 100, 50 } });
+	TextRenderQueue.push_back({ "Time: " + std::to_string(balls[0].ballPassThrough/1000), {325,50} });
 }
-
-
 
 void ProcessInput(InputState& inputState, GameState& gameState)
 {
@@ -373,8 +361,31 @@ void ProcessInput(InputState& inputState, GameState& gameState)
 	}
 
 	if (gameState.playerLives <= 0)
-	{
 		gameState.mode = GameMode::LOSE;
+
+
+	if (gameState.levels[gameState.currentLevel].brickCount == 0)
+	{
+		if (gameState.currentLevel < 2)
+		{
+			++gameState.currentLevel;
+			Ball newBall = {};
+			newBall.ballOnPaddle = true;
+			newBall.ballPassThrough = false;
+			newBall.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+			// why do I even need the ball position?
+			newBall.position = { 0.0f, 0.0f };
+			newBall.dimension = { 15.0f, 15.0f };
+			newBall.position = BallPositionToPaddleCenter(newBall.position, newBall.dimension, gameState.player.position, gameState.player.dimension);
+			newBall.velocity = { 0.0f , 0.0f };
+			newBall.textureId = gameState.balls[0].textureId;
+			gameState.balls.clear();
+			gameState.balls.push_back(newBall);
+		}
+		else
+			gameState.mode = GameMode::WIN;
+		
+		gameState.powerUps.clear();
 	}
 }
 
@@ -438,8 +449,11 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 			ball.textureId = PlatformCreateTexture("res/textures/ball.png", 1);
 		}
 		gameState.player.textureId = PlatformCreateTexture("res/textures/paddle.png", 1);
+
+		gameState.powerupTextureId = PlatformCreateTexture("res/textures/powerup_passthrough.png", 1);
 		
 		gameState.bleep = PlatformLoadWAV("res/audio/solid.wav");
+		gameState.powerSound = PlatformLoadWAV("res/audio/bleep.wav");
 		gameState.music = PlatformPlayMusic("res/audio/breakout.mp3");
 
 		gameState.initializedResources = true;

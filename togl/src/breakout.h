@@ -100,11 +100,13 @@ struct GameState
 	objectData player;
 	objectData bricks;
 	std::vector<objectData> powerUps;
+	unsigned int powerupTextureId;
 	int currentLevel = 0;
 
 	gameLevel levels[2];
 
 	void* bleep;
+	void* powerSound;
 	void* music;
 
 	int playerScore = 0;
