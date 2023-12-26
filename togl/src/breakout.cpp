@@ -129,18 +129,23 @@ std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int
 
 const std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, BlockCols);
 
+Ball initBall()
+{
+	Ball ball = {};
+	ball.ballOnPaddle = true;
+	ball.ballPassThrough = false;
+	ball.velocity = { 0.0f, 0.0f };
+	ball.position = { 0.0f, 0.0f };
+	ball.dimension = { 15.0f, 15.0f };
+	ball.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+	ball.textureId = -1;
+	return ball;
+}
+
 GameState initGameState() {
 	GameState result;
 
-	Ball ball =
-	{
-		true,
-		{0.0f},
-		{ 0.0f, 0.0f },
-		{ 15.0f, 15.0f },
-		{ 1.0, 1.0, 1.0, 1.0 },
-		{ 640 / 2.0f, 480 / 2.0f },
-	};
+	Ball ball = initBall();
 	objectData player =
 	{
 		{ 0.0f , 0.0f },
@@ -272,7 +277,7 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 				// this contrasts to the original version where I'd immediately call the function
 				// separates when do do something with how to do it
 				glm::vec2 difference = collision.difference;
-				ball.velocity += 0.001 * glm::length(difference.x);
+				ball.velocity += 0.001 * difference.x;
 			}
 		}
 	}
@@ -363,22 +368,14 @@ void ProcessInput(InputState& inputState, GameState& gameState)
 	if (gameState.playerLives <= 0)
 		gameState.mode = GameMode::LOSE;
 
-
 	if (gameState.levels[gameState.currentLevel].brickCount == 0)
 	{
 		if (gameState.currentLevel < 2)
 		{
 			++gameState.currentLevel;
-			Ball newBall = {};
-			newBall.ballOnPaddle = true;
-			newBall.ballPassThrough = false;
-			newBall.color = { 1.0f, 1.0f, 1.0f, 1.0f };
-			// why do I even need the ball position?
-			newBall.position = { 0.0f, 0.0f };
-			newBall.dimension = { 15.0f, 15.0f };
-			newBall.position = BallPositionToPaddleCenter(newBall.position, newBall.dimension, gameState.player.position, gameState.player.dimension);
-			newBall.velocity = { 0.0f , 0.0f };
+			Ball newBall = initBall();
 			newBall.textureId = gameState.balls[0].textureId;
+			newBall.position = BallPositionToPaddleCenter(newBall.position, newBall.dimension, gameState.player.position, gameState.player.dimension);
 			gameState.balls.clear();
 			gameState.balls.push_back(newBall);
 		}
