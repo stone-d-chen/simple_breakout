@@ -3,6 +3,8 @@
 #include <gtc/type_ptr.hpp>
 #include "breakout.h"
 
+#include <cstdlib>
+
 #include <algorithm>
 
 static const int worldWidth = 640;
@@ -95,15 +97,52 @@ void UpdateBallOnCollision(glm::vec2& ballVelocity, glm::vec2& ballPosition, con
 	}
 }
 
-void UpdatePlayerPosition(glm::vec2* playerPosition, InputState inputState, float deltaTime)
+ void UpdatePlayerPositionn(glm::vec2* playerPosition, glm::vec2 playerDimension, InputState inputState, float deltaTime)
 {
 	glm::vec2 playerPositionDelta = { 0.0f, 0.0f };
 	if (inputState.right)
+	{
 		playerPositionDelta = glm::vec2(1.0f, 0.0f) * 0.5f * deltaTime;
+		if (playerPositionDelta.x + playerPosition->x + playerDimension.x > (float)worldWidth)
+		{
+			playerPosition->x = (float)worldWidth - playerDimension.x;
+		}
+		else
+		{
+			*playerPosition += playerPositionDelta;
+		}
+	}
 	if (inputState.left)
+	{
 		playerPositionDelta = glm::vec2(-1.0f, 0.0f) * 0.5f * deltaTime;
+		printf("playerposition x: %f\r", playerPosition->x);
+		if ((playerPosition->x + playerPositionDelta.x) <= 0.0f)
+		{
+			playerPosition->x = 0.0f;
+		}
+		else
+		{
+			*playerPosition += playerPositionDelta;
+		}
+	}
+}
 
-	*playerPosition += playerPositionDelta;
+glm::vec2 UpdatePlayerPosition(glm::vec2 playerPosition, glm::vec2 playerDimension, InputState inputState, float deltaTime)
+{
+	glm::vec2 playerPositionDelta = { 0.0f, 0.0f };
+	if (inputState.right)
+	{
+		playerPositionDelta = glm::vec2(1.0f, 0.0f) * 0.5f * deltaTime;
+		if(playerPositionDelta.x + playerPosition.x + playerDimension.x > (float)worldWidth)
+			playerPositionDelta.x = (float)worldWidth - playerPosition.x - playerDimension.x;
+	}
+	if (inputState.left)
+	{
+		playerPositionDelta = glm::vec2(-1.0f, 0.0f) * 0.5f * deltaTime;
+		if (playerPosition.x + playerPositionDelta.x <= 0.0f)
+			playerPositionDelta.x = 0.0f - playerPosition.x;
+	}
+	return playerPositionDelta;
 }
 
 // /// ///              Level init       /////////// 
@@ -132,7 +171,7 @@ const std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, Block
 Ball initBall()
 {
 	Ball ball = {};
-	ball.ballOnPaddle = true;
+	ball.ballFollowsPaddle = true;
 	ball.ballPassThrough = false;
 	ball.velocity = { 0.0f, 0.0f };
 	ball.position = { 0.0f, 0.0f };
@@ -142,10 +181,18 @@ Ball initBall()
 	return ball;
 }
 
+glm::vec2 BallPositionToPaddleCenter(glm::vec2 ballPosition, glm::vec2 ballDimension, glm::vec2 paddlePosition, glm::vec2 paddleDimension)
+{
+	glm::vec2 result;
+	result.x = paddlePosition.x + 0.5f * paddleDimension.x - 0.5f * ballDimension.x;
+	result.y = paddlePosition.y + paddleDimension.y;
+	return result;
+}
+
+
 GameState initGameState() {
 	GameState result;
 
-	Ball ball = initBall();
 	objectData player =
 	{
 		{ 0.0f , 0.0f },
@@ -153,6 +200,9 @@ GameState initGameState() {
 		{ 3.0, 0.0, 0.0, 1.0 },
 		{ 640 / 2.0f , 480 * 1.0 / 10.0f },
 	};
+	Ball ball = initBall();
+	ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
+
 	objectData bricks = {};
 
 	bool running = true;
@@ -168,12 +218,40 @@ GameState initGameState() {
 	return result;
 }
 
-glm::vec2 BallPositionToPaddleCenter(glm::vec2 ballPosition, glm::vec2 ballDimension, glm::vec2 paddlePosition, glm::vec2 paddleDimension)
+
+PowerUp CreateRandomPowerUp(glm::vec2 position, GameState gameState)
 {
-	glm::vec2 result;
-	result.x = paddlePosition.x + 0.5f * paddleDimension.x - 0.5f * ballDimension.x;
-	result.y = paddlePosition.y + paddleDimension.y;
-	return result;
+	PowerUp powerup;
+	powerup.position = position;
+	powerup.dimension = { 30.0f, 30.0f };
+	powerup.velocity = { 0.0f, -0.1f };
+	float rand = std::rand() / (float)RAND_MAX;
+	if (rand < 0.4)
+	{
+		powerup.type = PowerUpType::PASSTHROUGH;
+		powerup.color = { 0.5, 1.0f, 0.5, 1.0f };
+		powerup.textureId = gameState.passthroughTextureId;
+	}
+	else if (rand < 0.6)
+	{
+		powerup.type = PowerUpType::SPEED;
+		powerup.color = { 0.5f, 0.0f, 0.5, 1.0f };
+		powerup.textureId = gameState.speedTextureId;
+
+	}
+	else if (rand < 0.8)
+	{
+		powerup.type = PowerUpType::STICKY;
+		powerup.color = { 0.5, 1.0f, 0.5, 1.0f };
+		powerup.textureId = gameState.stickyTextureId;
+	}
+	else if (rand < 1.0)
+	{
+		powerup.type = PowerUpType::INCREASE;
+		powerup.color = { 0.7, 6.0f, 0.3, 1.0f };
+		powerup.textureId = gameState.increaseTextureId;
+	}
+	return powerup;
 }
 
 void SimulateGame(InputState& inputState, objectData& player, GameState& gameState,
@@ -181,34 +259,38 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 {
 	///////////// UPDATE POSITIONS ///////////////////
 	// player position 
-	UpdatePlayerPosition(&player.position, inputState, (float)deltaTime);
+	glm::vec2 playerPositionDelta = UpdatePlayerPosition(player.position, player.dimension, inputState, (float)deltaTime);
+	player.position += playerPositionDelta;
 
 	for (auto& ball : gameState.balls)
 	{
 		if (inputState.reset)
 		{
-			ball.ballOnPaddle = true;
+			ball.ballFollowsPaddle = true;
 			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
 			ball.velocity = { 0.0f , 0.0f };
 		}
-		if (ball.ballOnPaddle && inputState.space && !(inputState.spaceProcessed))
+		if ((ball.ballFollowsPaddle) && inputState.space && !(inputState.spaceProcessed))
 		{
-			ball.ballOnPaddle = false;
-			inputState.spaceProcessed = true;
+			ball.ballFollowsPaddle = false;
+			ball.sticky = false;
+			ball.ballFollowsPaddle = false;
 			float ballSpeedScale = 0.3f;
 			ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+
+			inputState.spaceProcessed = true;
 		}
-		// ball position
-		if (ball.ballOnPaddle == true)
+		//ball position
+		else if (ball.ballFollowsPaddle == true)
 		{
- 			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
+			ball.position += playerPositionDelta;
 		}
 		if (ball.ballPassThrough > 0)
 		{
 			ball.ballPassThrough -= (float)deltaTime;
 		}
 
-		if (!inputState.reset && !ball.ballOnPaddle) // I removed the else if and introduced a bug which is very very annoying
+		if (!inputState.reset && !ball.ballFollowsPaddle) // I removed the else if and introduced a bug which is very very annoying
 		{
 			ball.position += ball.velocity * (float)deltaTime;
 
@@ -232,13 +314,12 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 						AudioQueue.push_back(gameState.bleep);
 						--gameState.levels[gameState.currentLevel].brickCount;
 
-						objectData powerup;
-						powerup.position = levelBricks[i];
-						powerup.dimension = { 30.0f, 30.0f };
-						powerup.velocity = { 0.0f, -0.1f };
-						powerup.color = { 0.0, 1.0f, 0.5, 1.0f };
-						powerup.textureId = gameState.powerupTextureId;
-						gameState.powerUps.push_back(powerup);
+
+						if ((std::rand() / (float) RAND_MAX) < 0.25)
+						{
+							PowerUp powerup = CreateRandomPowerUp(levelBricks[i], gameState);
+							gameState.powerUps.push_back(powerup);
+						}
 					}
 				}
 			}
@@ -270,14 +351,22 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 			Collision collision = CheckCollision(ball.position, ball.dimension, player.position, player.dimension);
 			if (collision.hasCollided)
 			{
-				UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
-				AudioQueue.push_back(gameState.bleep);
-				// this is essentially the command pattern, the command pattern states that you're yield a command, in this case the render queue implicitly describes the function to be called
-				// the parameters then are the members of the command function essentially
-				// this contrasts to the original version where I'd immediately call the function
-				// separates when do do something with how to do it
-				glm::vec2 difference = collision.difference;
-				ball.velocity += 0.001 * difference.x;
+				if (ball.sticky)
+				{
+					ball.ballFollowsPaddle = true;
+					ball.velocity = { 0.0f, 0.0f };
+				}
+				else
+				{
+					AudioQueue.push_back(gameState.bleep);
+					UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
+					// this is essentially the command pattern, the command pattern states that you're yield a command, in this case the render queue implicitly describes the function to be called
+					// the parameters then are the members of the command function essentially
+					// this contrasts to the original version where I'd immediately call the function
+					// separates when do do something with how to do it
+					glm::vec2 difference = collision.difference;
+					ball.velocity += 0.001 * difference.x;
+				}
 			}
 		}
 	}
@@ -289,10 +378,23 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 		Collision collision = AABBCollisionDetection(player.position, player.dimension, powerup.position, powerup.dimension);
 		if (collision.hasCollided)
 		{
-			powerup.position.y = 0;
+			powerup.position.y = 0; // for erasing?
 			AudioQueue.push_back(gameState.powerSound);
-			for (auto& ball : gameState.balls)
-				ball.ballPassThrough = 3000;
+			if (powerup.type == PowerUpType::PASSTHROUGH)
+			{
+				for (auto& ball : gameState.balls)
+					ball.ballPassThrough = 3000;
+			}
+			if (powerup.type == PowerUpType::SPEED)
+			{
+				for (auto& ball : gameState.balls)
+					ball.velocity *= glm::vec2(1.1f, 1.1f);
+			}
+			if (powerup.type == PowerUpType::STICKY)
+			{
+				for (auto& ball : gameState.balls)
+					ball.sticky = true;
+			}
 		}
 		if (powerup.position.y <= 0)
 			gameState.powerUps.erase(gameState.powerUps.begin() + i);
@@ -447,7 +549,11 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 		}
 		gameState.player.textureId = PlatformCreateTexture("res/textures/paddle.png", 1);
 
-		gameState.powerupTextureId = PlatformCreateTexture("res/textures/powerup_passthrough.png", 1);
+		gameState.passthroughTextureId = PlatformCreateTexture("res/textures/powerup_passthrough.png", 1);
+		gameState.speedTextureId = PlatformCreateTexture("res/textures/powerup_speed.png", 1);
+		gameState.increaseTextureId = PlatformCreateTexture("res/textures/powerup_increase.png", 1);
+		gameState.stickyTextureId = PlatformCreateTexture("res/textures/powerup_sticky.png", 1);
+
 		
 		gameState.bleep = PlatformLoadWAV("res/audio/solid.wav");
 		gameState.powerSound = PlatformLoadWAV("res/audio/bleep.wav");
@@ -456,7 +562,6 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 		gameState.initializedResources = true;
 	}
 	ProcessInput(inputState, gameState);
-
 
 	if (gameState.mode == GameMode::MENU)
 	{

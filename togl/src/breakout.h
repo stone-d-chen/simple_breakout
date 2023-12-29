@@ -80,8 +80,27 @@ struct objectData {
 
 struct Ball
 {
-	bool ballOnPaddle = true;
+	bool ballFollowsPaddle = true;
 	float ballPassThrough = 0; // in ms
+	bool sticky = false;
+	glm::vec2 velocity;
+	glm::vec2 dimension;
+	glm::vec4 color;
+	glm::vec2 position;
+	unsigned int textureId;
+};
+enum class PowerUpType
+{
+	PASSTHROUGH,
+	SPEED,
+	INCREASE,
+	STICKY,
+	POWERUP_COUNT
+};
+
+struct PowerUp
+{
+	PowerUpType type;
 	glm::vec2 velocity;
 	glm::vec2 dimension;
 	glm::vec4 color;
@@ -99,9 +118,13 @@ struct GameState
 	std::vector<Ball> balls;
 	objectData player;
 	objectData bricks;
-	std::vector<objectData> powerUps;
-	unsigned int powerupTextureId;
+	std::vector<PowerUp> powerUps;
 	int currentLevel = 0;
+
+	unsigned int speedTextureId;
+	unsigned int passthroughTextureId;
+	unsigned int stickyTextureId;
+	unsigned int increaseTextureId;
 
 	gameLevel levels[2];
 

@@ -369,6 +369,8 @@ void* PlatformPlayMusic(const char* filename)
 
 int main(int argc, char** args)
 {
+
+	std::srand(1231412);
 	// window 
 	SDL_Window* Window = initWindowing("Breakout", 960, 720);
 
