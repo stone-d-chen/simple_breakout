@@ -126,7 +126,7 @@ void UpdateBallOnCollision(glm::vec2& ballVelocity, glm::vec2& ballPosition, con
 		}
 	}
 }
-
+  
 glm::vec2 UpdatePlayerPosition(glm::vec2 playerPosition, glm::vec2 playerDimension, InputState inputState, float deltaTime)
 {
 	glm::vec2 playerPositionDelta = { 0.0f, 0.0f };
@@ -171,8 +171,8 @@ const std::vector<glm::vec2> levelBricks = CreateBrickPositions(BlockRows, Block
 Ball initBall()
 {
 	Ball ball = {};
-	ball.ballFollowsPaddle = true;
-	ball.ballPassThrough = false;
+	ball.followsPaddle = true;
+	ball.passThrough = false;
 	ball.velocity = { 0.0f, 0.0f };
 	ball.position = { 0.0f, 0.0f };
 	ball.dimension = { 15.0f, 15.0f };
@@ -266,31 +266,31 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 	{
 		if (inputState.reset)
 		{
-			ball.ballFollowsPaddle = true;
+			ball.onPaddle = true;
+			ball.followsPaddle = true;
 			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
 			ball.velocity = { 0.0f , 0.0f };
 		}
-		if ((ball.ballFollowsPaddle) && inputState.space && !(inputState.spaceProcessed))
+		if ((ball.onPaddle) && inputState.space && !(inputState.spaceProcessed))
 		{
-			ball.ballFollowsPaddle = false;
+			ball.onPaddle = false;
+			ball.followsPaddle = false;
 			ball.sticky = false;
-			ball.ballFollowsPaddle = false;
 			float ballSpeedScale = 0.3f;
 			ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
 
 			inputState.spaceProcessed = true;
 		}
-		//ball position
-		else if (ball.ballFollowsPaddle == true)
+		else if (ball.followsPaddle == true || ball.onPaddle)
 		{
 			ball.position += playerPositionDelta;
 		}
-		if (ball.ballPassThrough > 0)
+		if (ball.passThrough > 0)
 		{
-			ball.ballPassThrough -= (float)deltaTime;
+			ball.passThrough -= (float)deltaTime;
 		}
 
-		if (!inputState.reset && !ball.ballFollowsPaddle) // I removed the else if and introduced a bug which is very very annoying
+		if (!inputState.reset && !ball.followsPaddle && !ball.onPaddle) // I removed the else if and introduced a bug which is very very annoying
 		{
 			ball.position += ball.velocity * (float)deltaTime;
 
@@ -305,7 +305,7 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 					Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
 					if (collision.hasCollided) // on collision
 					{
-						if (ball.ballPassThrough <= 0)
+						if (ball.passThrough <= 0)
 						{
 							UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
 						}
@@ -353,7 +353,8 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 			{
 				if (ball.sticky)
 				{
-					ball.ballFollowsPaddle = true;
+					ball.onPaddle = true;
+					ball.followsPaddle = true;
 					ball.velocity = { 0.0f, 0.0f };
 				}
 				else
@@ -383,7 +384,7 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 			if (powerup.type == PowerUpType::PASSTHROUGH)
 			{
 				for (auto& ball : gameState.balls)
-					ball.ballPassThrough = 3000;
+					ball.passThrough = 3000;
 			}
 			if (powerup.type == PowerUpType::SPEED)
 			{
@@ -442,7 +443,7 @@ void RenderGame(
 	// really I would like a generalized renderer where I can pass an enum, so I can have a single queue
 	TextRenderQueue.push_back({ "Lives: " + std::to_string(lives), {550, 50} });
 	TextRenderQueue.push_back({ "Score: " + std::to_string(score), { 100, 50 } });
-	TextRenderQueue.push_back({ "Time: " + std::to_string(balls[0].ballPassThrough/1000), {325,50} });
+	TextRenderQueue.push_back({ "Time: " + std::to_string(balls[0].passThrough/1000), {325,50} });
 }
 
 void ProcessInput(InputState& inputState, GameState& gameState)
@@ -534,7 +535,7 @@ void RenderGameOver(InputState& inputState, std::vector<QuadRenderData>& RenderQ
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 	TextRenderQueue.push_back({ "GAME OVER", { xDim, yDim } });
 }
-// do I peel off this layer?
+
 void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 	std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue,
 	std::vector<void*>& AudioQueue, double deltaTime)

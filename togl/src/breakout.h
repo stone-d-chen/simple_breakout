@@ -80,8 +80,9 @@ struct objectData {
 
 struct Ball
 {
-	bool ballFollowsPaddle = true;
-	float ballPassThrough = 0; // in ms
+	bool onPaddle = true;
+	bool followsPaddle = true;
+	float passThrough = 0; // in ms
 	bool sticky = false;
 	glm::vec2 velocity;
 	glm::vec2 dimension;

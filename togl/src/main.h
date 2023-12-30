@@ -6,6 +6,12 @@ std::vector<QuadRenderData> RenderQueue;
 std::vector<TextRenderData> TextRenderQueue;
 std::vector<void*> AudioQueue;
 
+struct ShaderProgramSource
+{
+	std::string VertexSource;
+	std::string FragmentSource;
+};
+
 float quadVertices[] = {
 	 0.0f,	0.0f, /* texture flip */ 0.0f, 1.0f,
 	 0.0f,	1.0f, /* texture flip */ 0.0f, 0.0f,
