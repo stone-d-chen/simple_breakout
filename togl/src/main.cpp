@@ -63,12 +63,11 @@ void initSDLOpenGLBinding()
 
 SDL_Window* initWindowing(const char* WindowName, int Width, int Height)
 {
-	SDL_Window* Window = initSDLOpenGLWindow("My Window", Width, Height);
+	SDL_Window* Window = initSDLOpenGLWindow(WindowName, Width, Height);
 	initSDLOpenGLBinding();
 
 	return Window;
 }
-
 
 static ShaderProgramSource ParseShader(const std::string& filepath)
 {
@@ -141,7 +140,6 @@ unsigned int CreateTexture(const char* filename, int GLpixelFormat)
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -164,7 +162,6 @@ TextTextureInfo CreateTextTexture(SDL_Surface* surface, unsigned int GLpixelForm
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -350,7 +347,6 @@ void initSDLMixerAudio()
 	if (SDL_Init(SDL_INIT_AUDIO) < 0)
 	{
 		printf(SDL_GetError());
-
 	}
 	Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 2048);
 	return;
@@ -380,10 +376,9 @@ void* PlatformPlayMusic(const char* filename)
 
 int main(int argc, char** args)
 {
-
 	std::srand(1231412);
 	// window 
-	SDL_Window* Window = initWindowing("Breakout", 960, 720);
+	SDL_Window* Window = initWindowing("Breakout", 640, 480);
 
 	// audio
 	initSDLMixerAudio();
@@ -398,6 +393,37 @@ int main(int argc, char** args)
 	TTF_Init();
 	TTF_Font* font = TTF_OpenFont("res/fonts/Urbanist-Medium.ttf", 64);
 
+	unsigned int windowWidth = 640, windowHeight = 480;
+	unsigned int Fbo;
+	glGenFramebuffers(1, &Fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
+
+	// texture binding
+	unsigned int texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 640, 480, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// binding the above texture 
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	mainOGLContext oglFlipContext = {};
+	{
+		int modelLoc = glGetUniformLocation(shaderProgram, "model");
+		int colorLoc = glGetUniformLocation(shaderProgram, "tileColor");
+		unsigned int Vao = CreateVao(quadFlipVertices, sizeof(quadFlipVertices), quadElementIndices, sizeof(quadElementIndices));
+
+		oglFlipContext.Vao = Vao;
+		oglFlipContext.modelLoc = modelLoc;
+		oglFlipContext.colorLoc = colorLoc;
+	}
+
 	mainOGLContext oglContext = {};
 	{
 		int modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -410,9 +436,8 @@ int main(int argc, char** args)
 	}
 
 	// GLOBAL PROJECTION
-	unsigned int windowWidth = 640, windowHeight = 480;
 	int projLoc = glGetUniformLocation(shaderProgram, "projection");
-	glm::mat4 projection = glm::ortho(0.0f,(float)windowWidth, 0.0f, (float)windowHeight, -1.0f, 1.0f);
+	glm::mat4 projection = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight, -1.0f, 1.0f);
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 	// MODEL
@@ -431,17 +456,21 @@ int main(int argc, char** args)
 		gameState.running = UpdateInputState(gameState.inputState);
 		if (!gameState.running) break;
 
+		glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
+		glDisable(GL_DEPTH_TEST);
+		glClear(GL_COLOR_BUFFER_BIT);
+
 		/////////////////////////// GAME UPDATE & Render ////////////////////////////
 		GameUpdateAndRender(gameState, gameState.inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
 
 		// Sprite Render Queue
 		for (QuadRenderData quadData : RenderQueue)
 		{
-			DrawQuad(quadData.pixelDimensions, quadData.pixelPosition, quadData.rotation, quadData.Color, quadData.textureId, oglContext);
+			DrawQuad(quadData.pixelDimensions, quadData.pixelPosition, quadData.rotation, quadData.Color, quadData.textureId, oglFlipContext);
 		}
 		for (auto object : gameState.powerUps)
 		{
-			DrawQuad(object.dimension, object.position, 0, object.color, object.textureId, oglContext);
+			DrawQuad(object.dimension, object.position, 0, object.color, object.textureId, oglFlipContext);
 		}
 		RenderQueue.clear();
 
@@ -449,17 +478,18 @@ int main(int argc, char** args)
 		// Text Render Queue
 		for (TextRenderData textData : TextRenderQueue)
 		{
-			SDL_Surface* surfaceText = TTF_RenderUTF8_Blended(font, textData.text.c_str(), {255,255, 255});
+			SDL_Surface* surfaceText = TTF_RenderUTF8_Blended(font, textData.text.c_str(), { 255, 255, 255 });
 			SDL_Surface* surfaceRGBA = SDL_ConvertSurfaceFormat(surfaceText, SDL_PIXELFORMAT_ABGR8888, 0);
 			TextTextureInfo fonttexture = CreateTextTexture(surfaceRGBA, GL_RGBA);
-			// draw centerd
-			DrawQuad({
-				fonttexture.width / 2, fonttexture.height / 2 },
+			// draw centered
+			// if I just constructed a blank one this wouldn't be a problem 
+			DrawQuad(
+				{ fonttexture.width / 2, fonttexture.height / 2 },
 				textData.pixelPosition - glm::vec2{ fonttexture.width / 4, fonttexture.height / 4 },
 				0,
 				textData.color,
 				fonttexture.textureID,
-				oglContext);
+				oglFlipContext);
 			glDeleteTextures(1, &fonttexture.textureID);
 			SDL_FreeSurface(surfaceRGBA);
 			SDL_FreeSurface(surfaceText);
@@ -473,8 +503,12 @@ int main(int argc, char** args)
 		}
 		AudioQueue.clear();
 	
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
+		glDisable(GL_DEPTH_TEST);
+		DrawQuad({ 640, 480 }, { 0, 0 }, 0, { 1.0f, 1.0f, 1.0f, 1.0f }, texture, oglContext);
+
 		SDL_GL_SwapWindow(Window);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 	return(0);
 }

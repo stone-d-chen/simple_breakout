@@ -11,18 +11,27 @@ struct ShaderProgramSource
 	std::string FragmentSource;
 };
 
-float quadVertices[] = {
+float quadFlipVertices[] = {
 	 0.0f,	0.0f, /* texture flip */ 0.0f, 1.0f,
 	 0.0f,	1.0f, /* texture flip */ 0.0f, 0.0f,
 	 1.0f,   1.0f, /* texture flip */ 1.0f, 0.0f,
 	 1.0f,   0.0f, /* texture flip */ 1.0f, 1.0f,
 };
+
+float quadVertices[] = {
+	 0.0f, 0.0f, 0.0f, 0.0f,
+	 0.0f, 1.0f, 0.0f, 1.0f,
+	 1.0f, 1.0f, 1.0f, 1.0f,
+	 1.0f, 0.0f, 1.0f, 0.0f,
+};
+
 unsigned int quadElementIndices[] = {
-	0,1,2,
-	0,2,3
+	0, 1, 2,
+	0, 2, 3
 };
 
 struct mainOGLContext {
+	unsigned int Fbo;
 	unsigned int Vao;
 	unsigned int modelLoc;
 	unsigned int colorLoc;
