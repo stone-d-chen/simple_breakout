@@ -490,7 +490,7 @@ void ProcessInput(InputState& inputState, GameState& gameState)
 }
 
 void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue,
-	std::vector<TextRenderData>& TextRenderQueue, std::vector<void*>& AudioQueue, double deltaTime)
+	std::vector<TextRenderData>& TextRenderQueue, std::vector<void*>& AudioQueue, GameState& gameState, double deltaTime)
 {
 	static int selectedIndex = 0; // hmm is this a good way to go?
 	glm::vec4 selectedColor = { 0.2, 0.7, 0.9, 1.0f };
@@ -506,6 +506,12 @@ void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue
 		selectedIndex = glm::clamp(selectedIndex - 1, 0, 1);
 		inputState.upProcessed = true;
 	}
+
+	if (selectedIndex == 1 && inputState.space)
+	{
+		gameState.running = false;
+	}
+
 	const int menuItems = 2;
 	glm::vec4 menuColors[menuItems];
 	for (int i = 0; i < menuItems; ++i)
@@ -518,8 +524,7 @@ void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue
 	int yDim = worldHeight / 2;
 	int xDim = worldWidth / 2;
 	const int yDecrement = 50;
-	// @todo remove opengl stuff
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	PlatformClear();
 	TextRenderQueue.push_back({ "PAUSED" , { xDim, yDim } });
 	yDim -= yDecrement;
 	TextRenderQueue.push_back({ "Level Select: ", { xDim, yDim }, menuColors[0]});
@@ -531,8 +536,7 @@ void RenderGameOver(InputState& inputState, std::vector<QuadRenderData>& RenderQ
 {
 	int yDim = worldHeight / 2;
 	int xDim = worldWidth / 2;
-	// @todo remove opengl stuff
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
+	PlatformClear();
 	TextRenderQueue.push_back({ "GAME OVER", { xDim, yDim } });
 }
 
@@ -566,7 +570,7 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 
 	if (gameState.mode == GameMode::MENU)
 	{
-		RenderMenu(inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
+		RenderMenu(inputState, RenderQueue, TextRenderQueue, AudioQueue, gameState, deltaTime);
 	}
 	else if (gameState.mode == GameMode::LOSE)
 	{

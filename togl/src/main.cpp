@@ -221,9 +221,21 @@ void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition,c
 	glBindVertexArray(0);
 }
 
-void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, const glm::vec4 Color, unsigned int texture ,mainOGLContext context)
+void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, const glm::vec4 Color, unsigned int texture, mainOGLContext context)
 {
 	DrawQuad(pixelDimensions, pixelPosition, Color, texture, context.Vao, context.modelLoc, context.colorLoc);
+}
+
+void PlatformClear(void)
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	return;
+}
+
+void Clear(glm::vec4 color)
+{
+	glClearColor(color.r, color.g, color.b, color.a);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 bool UpdateInputState(InputState& inputstate)
@@ -405,13 +417,14 @@ int main(int argc, char** args)
 	GameState gameState = initGameState();
 
 	uint64_t LAST = SDL_GetPerformanceCounter();
-	while (running)
+	while (gameState.running)
 	{
 		uint64_t NOW = SDL_GetPerformanceCounter();
 		double deltaTime = (double)((NOW - LAST) * 1000 / (double)SDL_GetPerformanceFrequency());
 		LAST = NOW;
 
-		running = UpdateInputState(gameState.inputState);
+		gameState.running = UpdateInputState(gameState.inputState);
+		if (!gameState.running) break;
 
 		/////////////////////////// GAME UPDATE & Render ////////////////////////////
 		GameUpdateAndRender(gameState, gameState.inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);

@@ -1,7 +1,6 @@
 #pragma once
 
 // GLOBALS 
-bool running = true;
 std::vector<QuadRenderData> RenderQueue;
 std::vector<TextRenderData> TextRenderQueue;
 std::vector<void*> AudioQueue;

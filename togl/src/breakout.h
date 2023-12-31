@@ -2,6 +2,9 @@
 unsigned int PlatformCreateTexture(const char* filename, int pixelFormat);
 void* PlatformLoadWAV(const char* filename);
 void* PlatformPlayMusic(const char* filename);
+void PlatformClear();
+
+// forward declare and platform defines the rest later
 
 
 glm::vec4 Colors[] =
