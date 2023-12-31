@@ -63,6 +63,7 @@ struct InputState
 struct QuadRenderData {
 	glm::vec2 pixelDimensions;
 	glm::vec2 pixelPosition;
+	float rotation;
 	glm::vec4 Color;
 	unsigned int textureId;
 };
@@ -89,6 +90,8 @@ struct Ball
 	bool sticky = false;
 	glm::vec2 velocity;
 	glm::vec2 dimension;
+	float rotation = 0;
+	float rotVel = 0;
 	glm::vec4 color;
 	glm::vec2 position;
 	unsigned int textureId;
@@ -112,7 +115,20 @@ struct PowerUp
 	unsigned int textureId;
 };
 
+
 enum class GameMode { ACTIVE = 0, MENU, WIN, LOSE };
+
+struct GameAssets
+{
+	unsigned int speedTextureId;
+	unsigned int passthroughTextureId;
+	unsigned int stickyTextureId;
+	unsigned int increaseTextureId;
+	void* bleep;
+	void* powerSound;
+	void* music;
+};
+
 struct GameState
 {
 	bool initializedResources = false;
@@ -124,6 +140,8 @@ struct GameState
 	objectData bricks;
 	std::vector<PowerUp> powerUps;
 	int currentLevel = 0;
+
+	GameAssets assets;
 
 	unsigned int speedTextureId;
 	unsigned int passthroughTextureId;

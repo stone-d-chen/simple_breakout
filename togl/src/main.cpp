@@ -204,11 +204,16 @@ unsigned int CreateVao(float* Vertices, size_t VertexArraySize , unsigned int* I
 	return Vao;
 }
 
-void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition,const glm::vec4 Color, unsigned int texture,
+void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, float rotateRadians, const glm::vec4 Color, unsigned int texture,
 						unsigned int Vao, unsigned int modelLoc, unsigned int colorLoc)
 {
 	glm::mat4 model = glm::mat4(1.0);
 	model = glm::translate(model, glm::vec3(pixelPosition, 0.0f));
+
+	model = glm::translate(model, glm::vec3(0.5f * pixelDimensions.x, 0.5f * pixelDimensions.y, 0.0f));
+	model = glm::rotate(model, glm::radians(rotateRadians), glm::vec3(0.0f, 0.0f, 1.0f));
+	model = glm::translate(model, glm::vec3(-0.5 * pixelDimensions.x, -0.5f * pixelDimensions.y, 0.0f));
+
 	model = glm::scale(model, glm::vec3(pixelDimensions, 1.0f));
 
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -221,9 +226,9 @@ void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition,c
 	glBindVertexArray(0);
 }
 
-void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, const glm::vec4 Color, unsigned int texture, mainOGLContext context)
+void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, float rotation, const glm::vec4 Color, unsigned int texture, mainOGLContext context)
 {
-	DrawQuad(pixelDimensions, pixelPosition, Color, texture, context.Vao, context.modelLoc, context.colorLoc);
+	DrawQuad(pixelDimensions, pixelPosition, rotation, Color, texture, context.Vao, context.modelLoc, context.colorLoc);
 }
 
 void PlatformClear(void)
@@ -432,11 +437,11 @@ int main(int argc, char** args)
 		// Sprite Render Queue
 		for (QuadRenderData quadData : RenderQueue)
 		{
-			DrawQuad(quadData.pixelDimensions, quadData.pixelPosition, quadData.Color, quadData.textureId, oglContext);
+			DrawQuad(quadData.pixelDimensions, quadData.pixelPosition, quadData.rotation, quadData.Color, quadData.textureId, oglContext);
 		}
 		for (auto object : gameState.powerUps)
 		{
-			DrawQuad(object.dimension, object.position, object.color, object.textureId, oglContext);
+			DrawQuad(object.dimension, object.position, 0, object.color, object.textureId, oglContext);
 		}
 		RenderQueue.clear();
 
@@ -451,6 +456,7 @@ int main(int argc, char** args)
 			DrawQuad({
 				fonttexture.width / 2, fonttexture.height / 2 },
 				textData.pixelPosition - glm::vec2{ fonttexture.width / 4, fonttexture.height / 4 },
+				0,
 				textData.color,
 				fonttexture.textureID,
 				oglContext);

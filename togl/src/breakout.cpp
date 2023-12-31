@@ -175,6 +175,8 @@ Ball initBall()
 	ball.passThrough = false;
 	ball.velocity = { 0.0f, 0.0f };
 	ball.position = { 0.0f, 0.0f };
+	ball.rotation = 0;
+	ball.rotVel = 0;
 	ball.dimension = { 15.0f, 15.0f };
 	ball.color = { 1.0f, 1.0f, 1.0f, 1.0f };
 	ball.textureId = -1;
@@ -218,7 +220,6 @@ GameState initGameState() {
 	return result;
 }
 
-
 PowerUp CreateRandomPowerUp(glm::vec2 position, GameState gameState)
 {
 	PowerUp powerup;
@@ -258,10 +259,12 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 	double deltaTime, std::vector<void*>& AudioQueue)
 {
 	///////////// UPDATE POSITIONS ///////////////////
-	// player position 
+	
+	/// Player positions 
 	glm::vec2 playerPositionDelta = UpdatePlayerPosition(player.position, player.dimension, inputState, (float)deltaTime);
 	player.position += playerPositionDelta;
 
+	/// Ball
 	for (auto& ball : gameState.balls)
 	{
 		if (inputState.reset)
@@ -270,14 +273,16 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 			ball.followsPaddle = true;
 			ball.position = BallPositionToPaddleCenter(ball.position, ball.dimension, player.position, player.dimension);
 			ball.velocity = { 0.0f , 0.0f };
+			ball.rotVel = 0;
 		}
-		if ((ball.onPaddle) && inputState.space && !(inputState.spaceProcessed))
+		if (ball.onPaddle && inputState.space && !(inputState.spaceProcessed)) // need to know if it's on the paddle to release; 
 		{
 			ball.onPaddle = false;
 			ball.followsPaddle = false;
 			ball.sticky = false;
 			float ballSpeedScale = 0.3f;
 			ball.velocity = { 1.0f * ballSpeedScale, 1.0f * ballSpeedScale };
+			ball.rotVel = 1;
 
 			inputState.spaceProcessed = true;
 		}
@@ -285,23 +290,27 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 		{
 			ball.position += playerPositionDelta;
 		}
+
+		/// resolve powerups
 		if (ball.passThrough > 0)
 		{
 			ball.passThrough -= (float)deltaTime;
 		}
 
+		/// Motion and collision update
 		if (!inputState.reset && !ball.followsPaddle && !ball.onPaddle) // I removed the else if and introduced a bug which is very very annoying
 		{
 			ball.position += ball.velocity * (float)deltaTime;
+			ball.rotation += ball.rotVel * (float)deltaTime;
 
 			//////////////// PHYSICS RESOLUTION /////////////////
 			// Ball-Brick collision detection
-			float blockWidth = (float)worldWidth / (float)BlockCols;
-			float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
 			for (int i = 0; i < levelBricks.size(); ++i)
 			{
 				if (*((int*)(gameState.levels[gameState.currentLevel].levelData) + i) != 0)
 				{
+					const float blockWidth = (float)worldWidth / (float)BlockCols;
+					const float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
 					Collision collision = CheckCollision(ball.position, ball.dimension, levelBricks[i], { blockWidth, blockHeight });
 					if (collision.hasCollided) // on collision
 					{
@@ -313,7 +322,6 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 						gameState.levels[gameState.currentLevel].levelData[i] = 0;
 						AudioQueue.push_back(gameState.bleep);
 						--gameState.levels[gameState.currentLevel].brickCount;
-
 
 						if ((std::rand() / (float) RAND_MAX) < 0.25)
 						{
@@ -343,6 +351,7 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 			else if (ball.position.y < 0)
 			{
 				ball.velocity = { 0.0f, 0.0f };
+				ball.rotVel = 0;
 				ball.position.y = 0;
 				gameState.playerLives -= 1;
 			}
@@ -355,7 +364,9 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 				{
 					ball.onPaddle = true;
 					ball.followsPaddle = true;
+					ball.sticky = false; // turn off sticky
 					ball.velocity = { 0.0f, 0.0f };
+					ball.rotVel = 0;
 				}
 				else
 				{
@@ -399,7 +410,6 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 		}
 		if (powerup.position.y <= 0)
 			gameState.powerUps.erase(gameState.powerUps.begin() + i);
-
 	}
 }
 
@@ -410,10 +420,10 @@ void RenderGame(
 {
 	// Draw Balls
 	for (auto& ball : balls)
-		RenderQueue.push_back({ ball.dimension, ball.position, ball.color, ball.textureId });
+		RenderQueue.push_back({ ball.dimension, ball.position, ball.rotation, ball.color, ball.textureId });
 
 	// Draw Player
-	RenderQueue.push_back({ player.dimension, player.position, player.color, player.textureId });
+	RenderQueue.push_back({ player.dimension, player.position, 0, player.color, player.textureId });
 	// Draw Blocks
 	float blockWidth = (float)worldWidth / (float)BlockCols;
 	float blockHeight = worldHeight / ((float)BlockRows * 3.0f);
@@ -436,7 +446,7 @@ void RenderGame(
 			{
 				glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
 				glm::vec4 ColorSelected = Colors[TileType];
-				RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, ColorSelected, bricks.textureId });
+				RenderQueue.push_back({ { blockWidth, blockHeight }, blockPos, 0, ColorSelected, bricks.textureId });
 			}
 		}
 	}
@@ -527,7 +537,7 @@ void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue
 	PlatformClear();
 	TextRenderQueue.push_back({ "PAUSED" , { xDim, yDim } });
 	yDim -= yDecrement;
-	TextRenderQueue.push_back({ "Level Select: ", { xDim, yDim }, menuColors[0]});
+	TextRenderQueue.push_back({ "Level Select: " + std::to_string(gameState.currentLevel), {xDim, yDim}, menuColors[0]});
 	yDim -= yDecrement;
 	TextRenderQueue.push_back({ "Quit", { xDim, yDim }, menuColors[1]});
 }
