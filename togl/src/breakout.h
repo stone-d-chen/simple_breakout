@@ -2,7 +2,9 @@
 unsigned int PlatformCreateTexture(const char* filename, int pixelFormat);
 void* PlatformLoadWAV(const char* filename);
 void* PlatformPlayMusic(const char* filename);
+void* PlatformLoadFont(const char* filename, unsigned int pts);
 void PlatformClear();
+
 
 // forward declare and platform defines the rest later
 
@@ -16,14 +18,14 @@ glm::vec4 Colors[] =
 	{ 0.3f, 0.0f, 0.5f, 1.0f },
 };
 
-const int BlockRows = 3;
-const int BlockCols = 6;
-
 int gameLevel1[] =
 {
-  1, 1, 2, 3, 4, 1,
-  2, 1, 1, 1, 1, 2,
-  3, 1, 4, 2, 1, 1,
+  1, 1, 2, 3, 4, 1, 1, 1, 2, 3, 4, 1, 1, 1, 2, 3, 4, 1, 1, 1, 2, 3, 4, 1,
+  2, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 2,
+  3, 1, 4, 2, 1, 1, 3, 1, 4, 2, 1, 1, 3, 1, 4, 2, 1, 1, 3, 1, 4, 2, 1, 1,
+  1, 1, 2, 3, 4, 1, 1, 1, 2, 3, 4, 1, 1, 1, 2, 3, 4, 1, 1, 1, 2, 3, 4, 1,
+  2, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 2,
+  3, 1, 4, 2, 1, 1, 3, 1, 4, 2, 1, 1, 3, 1, 4, 2, 1, 1, 3, 1, 4, 2, 1, 1,
 };
 
 int gameLevel2[] =
@@ -69,6 +71,7 @@ struct QuadRenderData {
 };
 
 struct TextRenderData {
+	void* font;
 	std::string text;
 	glm::vec2 pixelPosition;
 	glm::vec4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -118,16 +121,16 @@ struct PowerUp
 
 enum class GameMode { ACTIVE = 0, MENU, WIN, LOSE };
 
-struct GameAssets
-{
-	unsigned int speedTextureId;
-	unsigned int passthroughTextureId;
-	unsigned int stickyTextureId;
-	unsigned int increaseTextureId;
-	void* bleep;
-	void* powerSound;
-	void* music;
-};
+// struct GameAssets
+// {
+// 	unsigned int speedTextureId;
+// 	unsigned int passthroughTextureId;
+// 	unsigned int stickyTextureId;
+// 	unsigned int increaseTextureId;
+// 	void* bleep;
+// 	void* powerSound;
+// 	void* music;
+// };
 
 struct GameState
 {
@@ -141,18 +144,20 @@ struct GameState
 	std::vector<PowerUp> powerUps;
 	int currentLevel = 0;
 
-	GameAssets assets;
+	// GameAssets assets;
 
 	unsigned int speedTextureId;
 	unsigned int passthroughTextureId;
 	unsigned int stickyTextureId;
 	unsigned int increaseTextureId;
 
-	gameLevel levels[2];
-
 	void* bleep;
 	void* powerSound;
 	void* music;
+
+	void* font;
+
+	gameLevel levels[2];
 
 	int playerScore = 0;
 	int playerLives = 3;

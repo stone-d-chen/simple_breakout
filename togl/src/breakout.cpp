@@ -7,8 +7,8 @@
 
 #include <algorithm>
 
-static const int worldWidth = 640;
-static const int worldHeight = 480;
+static const int worldWidth = 960;
+static const int worldHeight = 720;
 
 //////////////// COLLISION /////////////////////////
 
@@ -130,15 +130,16 @@ void UpdateBallOnCollision(glm::vec2& ballVelocity, glm::vec2& ballPosition, con
 glm::vec2 UpdatePlayerPosition(glm::vec2 playerPosition, glm::vec2 playerDimension, InputState inputState, float deltaTime)
 {
 	glm::vec2 playerPositionDelta = { 0.0f, 0.0f };
+	float playerSpeed = 0.7f;
 	if (inputState.right)
 	{
-		playerPositionDelta = glm::vec2(1.0f, 0.0f) * 0.5f * deltaTime;
+		playerPositionDelta = glm::vec2(1.0f, 0.0f) * playerSpeed * deltaTime;
 		if(playerPositionDelta.x + playerPosition.x + playerDimension.x > (float)worldWidth)
 			playerPositionDelta.x = (float)worldWidth - playerPosition.x - playerDimension.x;
 	}
 	if (inputState.left)
 	{
-		playerPositionDelta = glm::vec2(-1.0f, 0.0f) * 0.5f * deltaTime;
+		playerPositionDelta = glm::vec2(-1.0f, 0.0f) * playerSpeed * deltaTime;
 		if (playerPosition.x + playerPositionDelta.x <= 0.0f)
 			playerPositionDelta.x = 0.0f - playerPosition.x;
 	}
@@ -146,6 +147,10 @@ glm::vec2 UpdatePlayerPosition(glm::vec2 playerPosition, glm::vec2 playerDimensi
 }
 
 // /// ///              Level init       /////////// 
+
+const int BlockRows = 6;
+const int BlockCols = 24;
+
 std::vector<glm::vec2> CreateBrickPositions(unsigned int BlockRows, unsigned int BlockCols /*, worldWidth, worldHeight */)
 {
 	std::vector<glm::vec2> brickPositions;
@@ -255,10 +260,12 @@ PowerUp CreateRandomPowerUp(glm::vec2 position, GameState gameState)
 	return powerup;
 }
 
-void SimulateGame(InputState& inputState, objectData& player, GameState& gameState,
+void SimulateGame(InputState& inputState, GameState& gameState,
 	double deltaTime, std::vector<void*>& AudioQueue)
 {
 	///////////// UPDATE POSITIONS ///////////////////
+
+	auto& player = gameState.player;
 	
 	/// Player positions 
 	glm::vec2 playerPositionDelta = UpdatePlayerPosition(player.position, player.dimension, inputState, (float)deltaTime);
@@ -319,6 +326,7 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 							UpdateBallOnCollision(ball.velocity, ball.position, ball.dimension, collision);
 						}
 						gameState.playerScore += gameState.levels[gameState.currentLevel].levelData[i] * 10;
+						//gameState.playerScore += 10;
 						gameState.levels[gameState.currentLevel].levelData[i] = 0;
 						AudioQueue.push_back(gameState.bleep);
 						--gameState.levels[gameState.currentLevel].brickCount;
@@ -365,6 +373,7 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 					ball.onPaddle = true;
 					ball.followsPaddle = true;
 					ball.sticky = false; // turn off sticky
+					ball.position.y = player.position.y + player.dimension.y;
 					ball.velocity = { 0.0f, 0.0f };
 					ball.rotVel = 0;
 				}
@@ -407,6 +416,10 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 				for (auto& ball : gameState.balls)
 					ball.sticky = true;
 			}
+			if (powerup.type == PowerUpType::INCREASE)
+			{
+
+			}
 		}
 		if (powerup.position.y <= 0)
 			gameState.powerUps.erase(gameState.powerUps.begin() + i);
@@ -414,10 +427,17 @@ void SimulateGame(InputState& inputState, objectData& player, GameState& gameSta
 }
 
 void RenderGame(
-	std::vector<QuadRenderData>& RenderQueue, std::vector<TextRenderData>& TextRenderQueue,
-	std::vector<Ball> balls, objectData player, objectData bricks, int score, int lives,
-	int* gameLevel)
+	std::vector<QuadRenderData>& RenderQueue,
+	std::vector<TextRenderData>& TextRenderQueue,
+	GameState gameState)
 {
+	auto balls = gameState.balls;
+	auto player = gameState.player;
+	auto bricks = gameState.bricks;
+	auto score = gameState.playerScore;
+	auto lives = gameState.playerLives;
+	auto gameLevel = gameState.levels[gameState.currentLevel];
+
 	// Draw Balls
 	for (auto& ball : balls)
 		RenderQueue.push_back({ ball.dimension, ball.position, ball.rotation, ball.color, ball.textureId });
@@ -441,7 +461,7 @@ void RenderGame(
 			glm::vec4 ColorSelect;
 			}
 			*/
-			unsigned int TileType = gameLevel[rowIdx * BlockCols + colIdx];
+			unsigned int TileType = gameLevel.levelData[rowIdx * BlockCols + colIdx];
 			if (TileType != 0)
 			{
 				glm::vec2 blockPos = levelBricks[rowIdx * BlockCols + colIdx];
@@ -451,9 +471,9 @@ void RenderGame(
 		}
 	}
 	// really I would like a generalized renderer where I can pass an enum, so I can have a single queue
-	TextRenderQueue.push_back({ "Lives: " + std::to_string(lives), {550, 50} });
-	TextRenderQueue.push_back({ "Score: " + std::to_string(score), { 100, 50 } });
-	TextRenderQueue.push_back({ "Time: " + std::to_string(balls[0].passThrough/1000), {325,50} });
+	TextRenderQueue.push_back({ gameState.font, "Lives: " + std::to_string(lives), {550, 50} });
+	TextRenderQueue.push_back({ gameState.font, "Score: " + std::to_string(score), { 100, 50 } });
+	TextRenderQueue.push_back({ gameState.font, "Time: " + std::to_string(balls[0].passThrough/1000), {325,50} });
 }
 
 void ProcessInput(InputState& inputState, GameState& gameState)
@@ -535,19 +555,19 @@ void RenderMenu(InputState& inputState, std::vector<QuadRenderData>& RenderQueue
 	int xDim = worldWidth / 2;
 	const int yDecrement = 50;
 	PlatformClear();
-	TextRenderQueue.push_back({ "PAUSED" , { xDim, yDim } });
+	TextRenderQueue.push_back({ gameState.font, "PAUSED" , { xDim, yDim } });
 	yDim -= yDecrement;
-	TextRenderQueue.push_back({ "Level Select: " + std::to_string(gameState.currentLevel), {xDim, yDim}, menuColors[0]});
+	TextRenderQueue.push_back({ gameState.font, "Level Select: " + std::to_string(gameState.currentLevel), {xDim, yDim}, menuColors[0]});
 	yDim -= yDecrement;
-	TextRenderQueue.push_back({ "Quit", { xDim, yDim }, menuColors[1]});
+	TextRenderQueue.push_back({ gameState.font, "Quit", { xDim, yDim }, menuColors[1]});
 }
 void RenderGameOver(InputState& inputState, std::vector<QuadRenderData>& RenderQueue,
-	std::vector<TextRenderData>& TextRenderQueue, std::vector<void*>& AudioQueue, double deltaTime)
+	std::vector<TextRenderData>& TextRenderQueue, std::vector<void*>& AudioQueue, GameState gameState ,double deltaTime)
 {
 	int yDim = worldHeight / 2;
 	int xDim = worldWidth / 2;
 	PlatformClear();
-	TextRenderQueue.push_back({ "GAME OVER", { xDim, yDim } });
+	TextRenderQueue.push_back({ gameState.font, "GAME OVER", { xDim, yDim } });
 }
 
 void GameUpdateAndRender(GameState& gameState, InputState& inputState,
@@ -569,7 +589,9 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 		gameState.increaseTextureId = PlatformCreateTexture("res/textures/powerup_increase.png", 1);
 		gameState.stickyTextureId = PlatformCreateTexture("res/textures/powerup_sticky.png", 1);
 
-		
+		// basic shader
+		// font
+		gameState.font = PlatformLoadFont("res/fonts/Urbanist-Medium.ttf", 64);
 		gameState.bleep = PlatformLoadWAV("res/audio/solid.wav");
 		gameState.powerSound = PlatformLoadWAV("res/audio/bleep.wav");
 		gameState.music = PlatformPlayMusic("res/audio/breakout.mp3");
@@ -584,14 +606,11 @@ void GameUpdateAndRender(GameState& gameState, InputState& inputState,
 	}
 	else if (gameState.mode == GameMode::LOSE)
 	{
-		RenderGameOver(inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
+		RenderGameOver(inputState, RenderQueue, TextRenderQueue, AudioQueue, gameState, deltaTime);
 	}
 	else if (gameState.mode == GameMode::ACTIVE)
 	{
-		SimulateGame(inputState, gameState.player, gameState, deltaTime, AudioQueue);
-		RenderGame(RenderQueue, TextRenderQueue,
-			gameState.balls, gameState.player, gameState.bricks,
-			gameState.playerScore, gameState.playerLives,
-			gameState.levels[gameState.currentLevel].levelData);
+		SimulateGame(inputState, gameState, deltaTime, AudioQueue);
+		RenderGame(RenderQueue, TextRenderQueue, gameState);
 	}
 }
