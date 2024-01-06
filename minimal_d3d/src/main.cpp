@@ -12,21 +12,14 @@
 #include "xdata.h" // 3d model
 
 #include <SDL.h>
-#include <SDL_syswm.h>
 
 struct float3 { float x, y, z; };
 struct matrix { float m[4][4]; };
 
 matrix operator*(const matrix& m1, const matrix& m2);
 
-
-int main(int argc, char** args)
-//int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+SDL_Window* initSDL_Window()
 {
-   // WNDCLASSA wndClass = { 0, DefWindowProcA, 0, 0, 0, 0, 0, 0, 0, TITLE };
-   // RegisterClassA(&wndClass);
-   // HWND window = CreateWindowExA(0, TITLE, TITLE, WS_POPUP | WS_MAXIMIZE | WS_VISIBLE, 0, 0, 0, 0, nullptr, nullptr, nullptr, nullptr);
-
    SDL_Init(SDL_INIT_VIDEO);
    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
    SDL_Window* sdl_window = SDL_CreateWindow("SDL2 with D3D11",
@@ -36,10 +29,11 @@ int main(int argc, char** args)
       600,
       SDL_WINDOW_SHOWN);
 
-   // SDL_SysWMinfo info;
-   // SDL_VERSION(&info.version);
-   // SDL_GetWindowWMInfo(sdl_window, &info);
+   return sdl_window;
+}
 
+void init_D3D11(ID3D11Device1** device, ID3D11DeviceContext** deviceContext)
+{
    // device is like the raw adapter for create buffers and such
    D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_0 };
    ID3D11Device* baseDevice;
@@ -53,23 +47,41 @@ int main(int argc, char** args)
       featureLevels, ARRAYSIZE(featureLevels), D3D11_SDK_VERSION, &baseDevice, nullptr, &baseDeviceContext);
 
    // I want the COM device1 and com devicecontext1
-   ID3D11Device1* device;
-   baseDevice->QueryInterface(__uuidof(ID3D11Device1), reinterpret_cast<void**>(&device));
-   ID3D11DeviceContext1* deviceContext;
-   baseDeviceContext->QueryInterface(__uuidof(ID3D11DeviceContext1), reinterpret_cast<void**>(&deviceContext));
+   // ID3D11Device1* device;
+   // ID3D11DeviceContext1* deviceContext;
+   
+   baseDevice->QueryInterface(__uuidof(ID3D11Device1), reinterpret_cast<void**>(device));
+   baseDeviceContext->QueryInterface(__uuidof(ID3D11DeviceContext1), reinterpret_cast<void**>(deviceContext));
+}
 
-   // dxgi is like the lowerlevel d3d (not sure what the adapter is)
+void CreateDeviceAndSwapchain(IDXGISwapChain1** swapChain, ID3D11Device1** device, ID3D11DeviceContext1** deviceContext)
+{
+   D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_0 };
+   ID3D11Device* baseDevice;
+   
+   ID3D11DeviceContext* baseDeviceContext;
+   D3D11CreateDevice(nullptr,
+      D3D_DRIVER_TYPE_HARDWARE,
+      nullptr,
+      D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+      featureLevels, ARRAYSIZE(featureLevels),
+      D3D11_SDK_VERSION, &baseDevice,
+      nullptr, &baseDeviceContext);
+   
+   baseDevice->QueryInterface(__uuidof(ID3D11Device1), reinterpret_cast<void**>(device));
+   baseDeviceContext->QueryInterface(__uuidof(ID3D11DeviceContext1),
+      reinterpret_cast<void**>(deviceContext));
+   
    IDXGIDevice1* dxgiDevice;
-   device->QueryInterface(__uuidof(IDXGIDevice1), reinterpret_cast<void**>(&dxgiDevice));
+   (*device)->QueryInterface(__uuidof(IDXGIDevice1), reinterpret_cast<void**>(&dxgiDevice));
    IDXGIAdapter* dxgiAdapter;
    dxgiDevice->GetAdapter(&dxgiAdapter);
+   
    IDXGIFactory2* dxgiFactory;
    dxgiAdapter->GetParent(__uuidof(IDXGIFactory2), reinterpret_cast<void**>(&dxgiFactory));
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////
-
+   
    DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
-   swapChainDesc.Width = 0; // use window width
+   swapChainDesc.Width = 0; // use window wCreateDidth
    swapChainDesc.Height = 0; // use window height
    swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
    swapChainDesc.Stereo = FALSE;
@@ -81,12 +93,21 @@ int main(int argc, char** args)
    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD; // prefer DXGI_SWAP_EFFECT_FLIP_DISCARD, see Minimal D3D11 pt2 
    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
    swapChainDesc.Flags = 0;
+   
+   HWND window = GetActiveWindow(); // maybe move this directly to whwere I need
+   dxgiFactory->CreateSwapChainForHwnd(*device, window, &swapChainDesc, nullptr, nullptr, swapChain);
+}
 
+
+int main(int argc, char** args)
+{
+   SDL_Window* sdl_window = initSDL_Window();
+
+   ID3D11Device1* device;
+   ID3D11DeviceContext1* deviceContext;
    IDXGISwapChain1* swapChain;
-   // dxgi creates the swapchain (so what talks to the monitor essentially)
 
-   HWND window = GetActiveWindow();
-   dxgiFactory->CreateSwapChainForHwnd(device, window, &swapChainDesc, nullptr, nullptr, &swapChain);
+   CreateDeviceAndSwapchain(&swapChain, &device, &deviceContext);
 
    ///////////////////////////////////////////////////////////////////////////////////////////////
 
