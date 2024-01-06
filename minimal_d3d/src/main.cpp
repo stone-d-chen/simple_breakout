@@ -109,8 +109,6 @@ int main(int argc, char** args)
 
    CreateDeviceAndSwapchain(&swapChain, &device, &deviceContext);
 
-   ///////////////////////////////////////////////////////////////////////////////////////////////
-
    // from the swap chain, grab the buuffers I want 
    ID3D11Texture2D* frameBuffer;
    swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&frameBuffer));
@@ -118,8 +116,6 @@ int main(int argc, char** args)
 
    // create render view target
    device->CreateRenderTargetView(frameBuffer, nullptr, &frameBufferView);
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////
 
    D3D11_TEXTURE2D_DESC depthBufferDesc;
    frameBuffer->GetDesc(&depthBufferDesc); // copy from framebuffer properties
@@ -131,8 +127,6 @@ int main(int argc, char** args)
 
    ID3D11DepthStencilView* depthBufferView;
    device->CreateDepthStencilView(depthBuffer, nullptr, &depthBufferView);
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////
 
    ID3DBlob* vsBlob;
    D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "vs_main", "vs_5_0", 0, 0, &vsBlob, nullptr);
@@ -153,15 +147,11 @@ int main(int argc, char** args)
    ID3D11PixelShader* pixelShader;
    device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &pixelShader);
 
-   ///////////////////////////////////////////////////////////////////////////////////////////////
-
    D3D11_RASTERIZER_DESC1 rasterizerDesc = {};
    rasterizerDesc.FillMode = D3D11_FILL_SOLID;
    rasterizerDesc.CullMode = D3D11_CULL_BACK;
    ID3D11RasterizerState1* rasterizerState;
    device->CreateRasterizerState1(&rasterizerDesc, &rasterizerState);
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////
 
    D3D11_SAMPLER_DESC samplerDesc = {};
    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
@@ -174,8 +164,6 @@ int main(int argc, char** args)
 
    device->CreateSamplerState(&samplerDesc, &samplerState);
 
-   ///////////////////////////////////////////////////////////////////////////////////////////////
-
    D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
    depthStencilDesc.DepthEnable = TRUE;
    depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
@@ -184,8 +172,6 @@ int main(int argc, char** args)
    ID3D11DepthStencilState* depthStencilState;
 
    device->CreateDepthStencilState(&depthStencilDesc, &depthStencilState);
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////
 
    // constants are uniforms basically?
 
@@ -206,8 +192,6 @@ int main(int argc, char** args)
 
    device->CreateBuffer(&constantBufferDesc, nullptr, &constantBuffer);
 
-   ///////////////////////////////////////////////////////////////////////////////////////////////
-
    D3D11_BUFFER_DESC vertexBufferDesc = {};
    vertexBufferDesc.ByteWidth = sizeof(VertexData);
    vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
@@ -217,8 +201,6 @@ int main(int argc, char** args)
    ID3D11Buffer* vertexBuffer;
    device->CreateBuffer(&vertexBufferDesc, &vertexData, &vertexBuffer);
 
-   ///////////////////////////////////////////////////////////////////////////////////////////////
-
    D3D11_BUFFER_DESC indexBufferDesc = {};
    indexBufferDesc.ByteWidth = sizeof(IndexData);
    indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
@@ -227,8 +209,6 @@ int main(int argc, char** args)
    D3D11_SUBRESOURCE_DATA indexData = { IndexData };
    ID3D11Buffer* indexBuffer;
    device->CreateBuffer(&indexBufferDesc, &indexData, &indexBuffer);
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////
 
    D3D11_TEXTURE2D_DESC textureDesc = {};
    textureDesc.Width = TEXTURE_WIDTH;  // in xdata.h
@@ -249,16 +229,12 @@ int main(int argc, char** args)
    ID3D11ShaderResourceView* textureView;
    device->CreateShaderResourceView(texture, nullptr, &textureView);
 
-   ///////////////////////////////////////////////////////////////////////////////////////////////
-
    FLOAT backgroundColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
 
    UINT stride = 11 * sizeof(float); // vertex size (11 floats: float3 position, float3 normal, float2 texcoord, float3 color)
    UINT offset = 0;
 
    D3D11_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(depthBufferDesc.Width), static_cast<float>(depthBufferDesc.Height), 0.0f, 1.0f };
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////
 
    float w = viewport.Width / viewport.Height; // width (aspect ratio)
    float h = 1.0f;                             // height
@@ -299,7 +275,6 @@ int main(int argc, char** args)
       constants->LightVector = { 1.0f, -1.0f, 1.0f };
       deviceContext->Unmap(constantBuffer, 0);
 
-      ///////////////////////////////////////////////////////////////////////////////////////////
 
       deviceContext->ClearRenderTargetView(frameBufferView, backgroundColor);
       deviceContext->ClearDepthStencilView(depthBufferView, D3D11_CLEAR_DEPTH, 1.0f, 0);
@@ -323,28 +298,13 @@ int main(int argc, char** args)
       deviceContext->OMSetDepthStencilState(depthStencilState, 0);
       deviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff); // use default blend mode (i.e. disable)
 
-      ///////////////////////////////////////////////////////////////////////////////////////////
 
       deviceContext->DrawIndexed(ARRAYSIZE(IndexData), 0, 0);
-
-      ///////////////////////////////////////////////////////////////////////////////////////////
 
       swapChain->Present(1, 0);
    }
    return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 matrix operator*(const matrix& m1, const matrix& m2)
 {
