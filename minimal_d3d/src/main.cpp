@@ -54,7 +54,11 @@ void init_D3D11(ID3D11Device1** device, ID3D11DeviceContext** deviceContext)
    baseDeviceContext->QueryInterface(__uuidof(ID3D11DeviceContext1), reinterpret_cast<void**>(deviceContext));
 }
 
-void CreateDeviceAndSwapchain(IDXGISwapChain1** swapChain, ID3D11Device1** device, ID3D11DeviceContext1** deviceContext)
+void CreateDeviceAndSwapchain(
+   ID3D11Texture2D** frameBuffer,
+   IDXGISwapChain1** swapChain,
+   ID3D11Device1** device,
+   ID3D11DeviceContext1** deviceContext)
 {
    D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_0 };
    ID3D11Device* baseDevice;
@@ -96,8 +100,44 @@ void CreateDeviceAndSwapchain(IDXGISwapChain1** swapChain, ID3D11Device1** devic
    
    HWND window = GetActiveWindow(); // maybe move this directly to whwere I need
    dxgiFactory->CreateSwapChainForHwnd(*device, window, &swapChainDesc, nullptr, nullptr, swapChain);
+
+   (*swapChain)->GetBuffer(0,
+      __uuidof(ID3D11Texture2D),
+      reinterpret_cast<void**>(frameBuffer));
 }
 
+void ParseAndCreateShaders(
+   const WCHAR* name,
+   ID3D11VertexShader** vertexShader,
+   ID3D11PixelShader** pixelShader,
+   ID3D11InputLayout** inputLayout,
+   D3D11_INPUT_ELEMENT_DESC* inputElementDesc,
+   UINT NumElements,
+   ID3D11Device1* device)
+{
+   ID3DBlob* vsBlob;
+   D3DCompileFromFile(name,
+      nullptr, nullptr,
+      "vs_main", "vs_5_0",
+      0, 0, &vsBlob, nullptr);
+   device->CreateVertexShader(
+      vsBlob->GetBufferPointer(),
+      vsBlob->GetBufferSize(),
+      nullptr,
+      vertexShader);
+
+   ID3DBlob* psBlob;
+   D3DCompileFromFile(name, nullptr, nullptr, "ps_main", "ps_5_0", 0, 0, &psBlob, nullptr);
+   device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, pixelShader);
+
+   device->CreateInputLayout(
+      inputElementDesc,
+      NumElements,
+      vsBlob->GetBufferPointer(),
+      vsBlob->GetBufferSize(),
+      inputLayout);
+
+}
 
 int main(int argc, char** args)
 {
@@ -106,14 +146,13 @@ int main(int argc, char** args)
    ID3D11Device1* device;
    ID3D11DeviceContext1* deviceContext;
    IDXGISwapChain1* swapChain;
-
-   CreateDeviceAndSwapchain(&swapChain, &device, &deviceContext);
+   ID3D11Texture2D* frameBuffer;
+   CreateDeviceAndSwapchain(&frameBuffer, &swapChain, &device, &deviceContext);
 
    // from the swap chain, grab the buffers I want 
-   ID3D11Texture2D* frameBuffer;
-   swapChain->GetBuffer(0,
-      __uuidof(ID3D11Texture2D),
-      reinterpret_cast<void**>(&frameBuffer));
+   // swapChain->GetBuffer(0,
+   //    __uuidof(ID3D11Texture2D),
+   //    reinterpret_cast<void**>(&frameBuffer));
 
    ID3D11RenderTargetView* frameBufferView;
    device->CreateRenderTargetView(frameBuffer, nullptr, &frameBufferView);
@@ -122,22 +161,45 @@ int main(int argc, char** args)
    frameBuffer->GetDesc(&depthBufferDesc); // copy from framebuffer properties
    depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
    depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
    ID3D11Texture2D* depthBuffer;
-   device->CreateTexture2D(&depthBufferDesc, nullptr, &depthBuffer);
    ID3D11DepthStencilView* depthBufferView;
+   device->CreateTexture2D(&depthBufferDesc, nullptr, &depthBuffer);
    device->CreateDepthStencilView(depthBuffer, nullptr, &depthBufferView);
 
-   ID3DBlob* vsBlob;
-   D3DCompileFromFile(L"shaders.hlsl",
-      nullptr, nullptr,
-      "vs_main", "vs_5_0",
-      0, 0, &vsBlob, nullptr);
-   ID3D11VertexShader* vertexShader;
-   device->CreateVertexShader(
-      vsBlob->GetBufferPointer(),
-      vsBlob->GetBufferSize(),
-      nullptr,
-      &vertexShader);
+   //ID3DBlob* vsBlob;
+   //D3DCompileFromFile(L"shaders.hlsl",
+   //   nullptr, nullptr,
+   //   "vs_main", "vs_5_0",
+   //   0, 0, &vsBlob, nullptr);
+   //ID3D11VertexShader* vertexShader;
+   //device->CreateVertexShader(
+   //   vsBlob->GetBufferPointer(),
+   //   vsBlob->GetBufferSize(),
+   //   nullptr,
+   //   &vertexShader);
+
+   //ID3DBlob* psBlob;
+   //D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "ps_main", "ps_5_0", 0, 0, &psBlob, nullptr);
+   //ID3D11PixelShader* pixelShader;
+   //device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &pixelShader);
+   //
+   //D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = // float3 position, float3 normal, float2 texcoord, float3 color
+   //{
+   //    { "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,                            0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+   //    { "NOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+   //    { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+   //    { "COL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+   //};
+
+   //ID3D11InputLayout* inputLayout;
+   //device->CreateInputLayout(
+   //   inputElementDesc,
+   //   ARRAYSIZE(inputElementDesc),
+   //   vsBlob->GetBufferPointer(),
+   //   vsBlob->GetBufferSize(),
+   //   &inputLayout);
+
 
    D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = // float3 position, float3 normal, float2 texcoord, float3 color
    {
@@ -146,18 +208,15 @@ int main(int argc, char** args)
        { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
        { "COL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
    };
-
-   ID3DBlob* psBlob;
-   D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "ps_main", "ps_5_0", 0, 0, &psBlob, nullptr);
+   ID3D11VertexShader* vertexShader;
    ID3D11PixelShader* pixelShader;
-   device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &pixelShader);
-
    ID3D11InputLayout* inputLayout;
-   device->CreateInputLayout(inputElementDesc,
-      ARRAYSIZE(inputElementDesc),
-      vsBlob->GetBufferPointer(),
-      vsBlob->GetBufferSize(),
-      &inputLayout);
+   ParseAndCreateShaders(
+      L"shaders.hlsl",
+      &vertexShader, &pixelShader,
+      &inputLayout, inputElementDesc, ARRAYSIZE(inputElementDesc),
+      device);
+
 
    D3D11_RASTERIZER_DESC1 rasterizerDesc = {};
    rasterizerDesc.FillMode = D3D11_FILL_SOLID;
@@ -258,36 +317,12 @@ int main(int argc, char** args)
          OutputDebugString(L"escape pressed\r");
       }
 
-      //matrix rotateX = { 1, 0, 0, 0,
-      //                   0, static_cast<float>(cos(modelRotation.x)), -static_cast<float>(sin(modelRotation.x)), 0,
-      //                   0, static_cast<float>(sin(modelRotation.x)),  static_cast<float>(cos(modelRotation.x)), 0, 
-      //                   0, 0, 0, 1 };
-      //matrix rotateY = { static_cast<float>(cos(modelRotation.y)), 0, static_cast<float>(sin(modelRotation.y)), 0, 0,
-      //                   1, 0, 0, -static_cast<float>(sin(modelRotation.y)),
-      //                   0, static_cast<float>(cos(modelRotation.y)), 0,
-      //                   0, 0, 0, 1 };
-      //matrix rotateZ = { static_cast<float>(cos(modelRotation.z)), -static_cast<float>(sin(modelRotation.z)), 0, 0,
-      //                   static_cast<float>(sin(modelRotation.z)),  static_cast<float>(cos(modelRotation.z)), 0, 0,
-      //                   0, 0, 1, 0,
-      //                   0, 0, 0, 1 };
-
-      // matrix scale = { modelScale.x, 0, 0, 0,
-      //            0, modelScale.y, 0, 0,
-      //            0, 0, modelScale.z, 0,
-      //            0, 0, 0, 1 };
-      // 
-      //matrix translate = { 1, 0, 0, 0,  
-      //                     0, 1, 0, 0,
-      //                     0, 0, 1, 0,
-      //                     modelTranslation.x, modelTranslation.y, modelTranslation.z, 1 };
-
       glm::mat4 model(1.0f);
       auto rotateX = glm::rotate(model, modelRotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
       auto rotateY = glm::rotate(model, modelRotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
       auto rotateZ = glm::rotate(model, modelRotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
       auto scale = glm::scale(model, glm::vec3(modelScale.x, modelScale.y, modelScale.z));
       auto translate = glm::translate(model, glm::vec3(modelTranslation.x, modelTranslation.y, modelTranslation.z));
-
       modelRotation.x += 0.005f;
       modelRotation.y += 0.009f;
       modelRotation.z += 0.001f;
@@ -295,13 +330,7 @@ int main(int argc, char** args)
       D3D11_MAPPED_SUBRESOURCE mappedSubresource;
       deviceContext->Map(constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
       Constants* constants = reinterpret_cast<Constants*>(mappedSubresource.pData);
-      // constants->Transform =  rotateX * rotateY * rotateZ * scale * translate;
       constants->Transform = translate * rotateX * rotateY * rotateZ * scale;
-      //constants->Projection = { 2 * n / w, 0,         0,               0,
-      //                          0,         2 * n / h, 0,               0,
-      //                          0,         0,         f / (f - n),     1,
-      //                          0,         0,         n * f / (n - f), 0 };
-      //
       constants->Projection = glm::perspectiveLH(glm::radians(60.f), w, n, f);
       constants->LightVector = { 1.0f, -1.0f, 1.0f };
       deviceContext->Unmap(constantBuffer, 0);
