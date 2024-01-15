@@ -16,6 +16,9 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 struct float3 { float x, y, z; };
 
 SDL_Window* initSDL_Window()
@@ -67,7 +70,7 @@ void CreateDeviceAndSwapchain(
    D3D11CreateDevice(nullptr,
       D3D_DRIVER_TYPE_HARDWARE,
       nullptr,
-      D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+      D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
       featureLevels, ARRAYSIZE(featureLevels),
       D3D11_SDK_VERSION, &baseDevice,
       nullptr, &baseDeviceContext);
@@ -116,7 +119,7 @@ void ParseAndCreateShaders(
    ID3D11Device1* device)
 {
    ID3DBlob* vsBlob;
-   D3DCompileFromFile(name,
+   auto Result = D3DCompileFromFile(name,
       nullptr, nullptr,
       "vs_main", "vs_5_0",
       0, 0, &vsBlob, nullptr);
@@ -139,6 +142,44 @@ void ParseAndCreateShaders(
 
 }
 
+ID3D11Texture2D* CreateTexture(ID3D11Device1* device, const char* filename, DXGI_FORMAT format)
+{
+   int width, height, nrChannels;
+   unsigned char* image = stbi_load(filename, &width, &height, &nrChannels, 0);
+
+   D3D11_TEXTURE2D_DESC textureDesc = {};
+   textureDesc.Width = TEXTURE_WIDTH;  // in xdata.h
+   textureDesc.Height = TEXTURE_HEIGHT; // in xdata.h
+   textureDesc.MipLevels = 1;
+   textureDesc.ArraySize = 1;
+   textureDesc.Format = format;
+   textureDesc.SampleDesc.Count = 1;
+   textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+   textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+   D3D11_SUBRESOURCE_DATA textureData = {};
+   textureData.pSysMem = TextureData;
+   textureData.SysMemPitch = TEXTURE_WIDTH * sizeof(UINT); // 4 bytes per pixel
+
+   ID3D11Texture2D* texture;
+   device->CreateTexture2D(&textureDesc, &textureData, &texture);
+   return texture;
+}
+
+
+ID3D11SamplerState* CreateSampler(ID3D11Device1* device)
+{
+   D3D11_SAMPLER_DESC samplerDesc = {};
+   samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+   samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+   samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+   samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+   samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+   ID3D11SamplerState* samplerState;
+   device->CreateSamplerState(&samplerDesc, &samplerState);
+   return samplerState;
+}
+
 int main(int argc, char** args)
 {
    SDL_Window* sdl_window = initSDL_Window();
@@ -148,11 +189,6 @@ int main(int argc, char** args)
    IDXGISwapChain1* swapChain;
    ID3D11Texture2D* frameBuffer;
    CreateDeviceAndSwapchain(&frameBuffer, &swapChain, &device, &deviceContext);
-
-   // from the swap chain, grab the buffers I want 
-   // swapChain->GetBuffer(0,
-   //    __uuidof(ID3D11Texture2D),
-   //    reinterpret_cast<void**>(&frameBuffer));
 
    ID3D11RenderTargetView* frameBufferView;
    device->CreateRenderTargetView(frameBuffer, nullptr, &frameBufferView);
@@ -167,40 +203,7 @@ int main(int argc, char** args)
    device->CreateTexture2D(&depthBufferDesc, nullptr, &depthBuffer);
    device->CreateDepthStencilView(depthBuffer, nullptr, &depthBufferView);
 
-   //ID3DBlob* vsBlob;
-   //D3DCompileFromFile(L"shaders.hlsl",
-   //   nullptr, nullptr,
-   //   "vs_main", "vs_5_0",
-   //   0, 0, &vsBlob, nullptr);
-   //ID3D11VertexShader* vertexShader;
-   //device->CreateVertexShader(
-   //   vsBlob->GetBufferPointer(),
-   //   vsBlob->GetBufferSize(),
-   //   nullptr,
-   //   &vertexShader);
-
-   //ID3DBlob* psBlob;
-   //D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "ps_main", "ps_5_0", 0, 0, &psBlob, nullptr);
-   //ID3D11PixelShader* pixelShader;
-   //device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &pixelShader);
-   //
-   //D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = // float3 position, float3 normal, float2 texcoord, float3 color
-   //{
-   //    { "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,                            0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-   //    { "NOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-   //    { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-   //    { "COL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-   //};
-
-   //ID3D11InputLayout* inputLayout;
-   //device->CreateInputLayout(
-   //   inputElementDesc,
-   //   ARRAYSIZE(inputElementDesc),
-   //   vsBlob->GetBufferPointer(),
-   //   vsBlob->GetBufferSize(),
-   //   &inputLayout);
-
-
+#if 0
    D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = // float3 position, float3 normal, float2 texcoord, float3 color
    {
        { "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,                            0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -208,6 +211,7 @@ int main(int argc, char** args)
        { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
        { "COL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
    };
+
    ID3D11VertexShader* vertexShader;
    ID3D11PixelShader* pixelShader;
    ID3D11InputLayout* inputLayout;
@@ -216,22 +220,29 @@ int main(int argc, char** args)
       &vertexShader, &pixelShader,
       &inputLayout, inputElementDesc, ARRAYSIZE(inputElementDesc),
       device);
-
-
+#else 
+   D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = // float3 position, float3 normal, float2 texcoord, float3 color
+   {
+       { "POS", 0, DXGI_FORMAT_R32G32_FLOAT, 0,                            0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+       { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+   };
+   ID3D11VertexShader* vertexShader;
+   ID3D11PixelShader* pixelShader;
+   ID3D11InputLayout* inputLayout;
+   ParseAndCreateShaders(
+      L"sprite.hlsl",
+      &vertexShader, &pixelShader,
+      &inputLayout, inputElementDesc, ARRAYSIZE(inputElementDesc),
+      device);
+#endif
+   
    D3D11_RASTERIZER_DESC1 rasterizerDesc = {};
    rasterizerDesc.FillMode = D3D11_FILL_SOLID;
    rasterizerDesc.CullMode = D3D11_CULL_BACK;
    ID3D11RasterizerState1* rasterizerState;
    device->CreateRasterizerState1(&rasterizerDesc, &rasterizerState);
 
-   D3D11_SAMPLER_DESC samplerDesc = {};
-   samplerDesc.Filter         = D3D11_FILTER_MIN_MAG_MIP_POINT;
-   samplerDesc.AddressU       = D3D11_TEXTURE_ADDRESS_WRAP;
-   samplerDesc.AddressV       = D3D11_TEXTURE_ADDRESS_WRAP;
-   samplerDesc.AddressW       = D3D11_TEXTURE_ADDRESS_WRAP;
-   samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-   ID3D11SamplerState* samplerState;
-   device->CreateSamplerState(&samplerDesc, &samplerState);
+   ID3D11SamplerState* samplerState = CreateSampler(device);
 
    D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
    depthStencilDesc.DepthEnable = TRUE;
@@ -247,81 +258,85 @@ int main(int argc, char** args)
       glm::mat4 Projection;
       float3 LightVector;
    };
-
-   D3D11_BUFFER_DESC constantBufferDesc = {};
    // round constant buffer size to 16 byte boundary
+   D3D11_BUFFER_DESC constantBufferDesc = {};
    constantBufferDesc.ByteWidth      = sizeof(Constants) + 0xf & 0xfffffff0;
    constantBufferDesc.Usage          = D3D11_USAGE_DYNAMIC;
    constantBufferDesc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
    constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
    ID3D11Buffer* constantBuffer;
    device->CreateBuffer(&constantBufferDesc, nullptr, &constantBuffer);
-
+   
+   /// VERTEX BUFFER
+   /// Index
+#if 0
    D3D11_BUFFER_DESC vertexBufferDesc = {};
-   vertexBufferDesc.ByteWidth        = sizeof(VertexData);
-   vertexBufferDesc.Usage            = D3D11_USAGE_IMMUTABLE;
-   vertexBufferDesc.BindFlags        = D3D11_BIND_VERTEX_BUFFER;
+   vertexBufferDesc.ByteWidth = sizeof(VertexData);
+   vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+   vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
    D3D11_SUBRESOURCE_DATA vertexData = { VertexData };
+#else
+   float Vdata[] = {   0.0,  0.0, 0.0, 0.0,
+                       1.0,  0.0, 0.0, 1.0,
+                       1.0,  1.0, 1.0, 1.0,
+                       0.0,  1.0, 1.0, 0.0};
+   D3D11_BUFFER_DESC vertexBufferDesc = {};
+   vertexBufferDesc.ByteWidth = sizeof(Vdata);
+   vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+   vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+   D3D11_SUBRESOURCE_DATA vertexData = { Vdata };
+#endif
    ID3D11Buffer* vertexBuffer;
    device->CreateBuffer(&vertexBufferDesc, &vertexData, &vertexBuffer);
-
+ 
+#if 0
    D3D11_BUFFER_DESC indexBufferDesc = {};
    indexBufferDesc.ByteWidth         = sizeof(IndexData);
    indexBufferDesc.Usage             = D3D11_USAGE_IMMUTABLE;
    indexBufferDesc.BindFlags         = D3D11_BIND_INDEX_BUFFER;
    D3D11_SUBRESOURCE_DATA indexData  = { IndexData };
+#else
+   unsigned int iData[] = { 0, 2, 1, 0, 3, 2 };
+   D3D11_BUFFER_DESC indexBufferDesc = {};
+   indexBufferDesc.ByteWidth = sizeof(iData);
+   indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+   indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+   D3D11_SUBRESOURCE_DATA indexData = {iData};
+#endif
    ID3D11Buffer* indexBuffer;
    device->CreateBuffer(&indexBufferDesc, &indexData, &indexBuffer);
 
-   D3D11_TEXTURE2D_DESC textureDesc = {};
-   textureDesc.Width            = TEXTURE_WIDTH;  // in xdata.h
-   textureDesc.Height           = TEXTURE_HEIGHT; // in xdata.h
-   textureDesc.MipLevels        = 1;
-   textureDesc.ArraySize        = 1;
-   textureDesc.Format           = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-   textureDesc.SampleDesc.Count = 1;
-   textureDesc.Usage            = D3D11_USAGE_IMMUTABLE;
-   textureDesc.BindFlags        = D3D11_BIND_SHADER_RESOURCE;
-
-   D3D11_SUBRESOURCE_DATA textureData = {};
-   textureData.pSysMem     = TextureData;
-   textureData.SysMemPitch = TEXTURE_WIDTH * sizeof(UINT); // 4 bytes per pixel
-   ID3D11Texture2D* texture;
-   device->CreateTexture2D(&textureDesc, &textureData, &texture);
+   /// Texture
+   ID3D11Texture2D* texture = CreateTexture(device, "not used", DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
    ID3D11ShaderResourceView* textureView;
    device->CreateShaderResourceView(texture, nullptr, &textureView);
 
    FLOAT backgroundColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
 
-   UINT stride = 11 * sizeof(float); // vertex size (11 floats: float3 position, float3 normal, float2 texcoord, float3 color)
+   UINT stride = 4 * sizeof(float); // vertex size (11 floats: float3 position, float3 normal, float2 texcoord, float3 color)
    UINT offset = 0;
 
    D3D11_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(depthBufferDesc.Width), static_cast<float>(depthBufferDesc.Height), 0.0f, 1.0f };
-
-   float w = viewport.Width / viewport.Height; // width (aspect ratio)
-   float h = 1.0f;                             // height
-   float n = 1.0f;                             // near
-   float f = 9.0f;                             // far
+   float w = viewport.Width / viewport.Height; float h = 1.0f; float n = 1.f; float f = 10.0f;
 
    float3 modelRotation = { 0.0f, 0.0f, 0.0f };
-   float3 modelScale = { 1.0f, 1.0f, 1.0f };
-   float3 modelTranslation = { 0.0f, 0.0f, 4.0f };
+   float3 modelScale = { 400.0f, 200.0f, 0.0f };       // half  I have no idea why
+   float3 modelTranslation = { 100.0f, 100.0f, 0.0f }; // centr I have no idea why
 
    const uint8_t* keys = SDL_GetKeyboardState(nullptr);
    while (true)
    {
       SDL_PumpEvents();
       if (keys[SDL_SCANCODE_ESCAPE])
-      {
          break;
-         OutputDebugString(L"escape pressed\r");
-      }
 
       glm::mat4 model(1.0f);
-      auto rotateX = glm::rotate(model, modelRotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
-      auto rotateY = glm::rotate(model, modelRotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-      auto rotateZ = glm::rotate(model, modelRotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
-      auto scale = glm::scale(model, glm::vec3(modelScale.x, modelScale.y, modelScale.z));
+     // auto rotateX = glm::rotate(model, modelRotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
+     // auto rotateY = glm::rotate(model, modelRotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
+     // auto rotateZ = glm::rotate(model, modelRotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+      // auto scale     = glm::scale(model, glm::vec3(modelScale.x, modelScale.y, modelScale.z) / 4.0f);
+      auto scale     = glm::scale(model, glm::vec3(modelScale.x, modelScale.y, modelScale.z) );
+
       auto translate = glm::translate(model, glm::vec3(modelTranslation.x, modelTranslation.y, modelTranslation.z));
       modelRotation.x += 0.005f;
       modelRotation.y += 0.009f;
@@ -330,11 +345,10 @@ int main(int argc, char** args)
       D3D11_MAPPED_SUBRESOURCE mappedSubresource;
       deviceContext->Map(constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
       Constants* constants = reinterpret_cast<Constants*>(mappedSubresource.pData);
-      constants->Transform = translate * rotateX * rotateY * rotateZ * scale;
-      constants->Projection = glm::perspectiveLH(glm::radians(60.f), w, n, f);
-      constants->LightVector = { 1.0f, -1.0f, 1.0f };
+      //constants->Transform = translate * rotateX * rotateY * rotateZ * scale;
+      constants->Transform =  translate * scale * glm::mat4(1.0f);
+      constants->Projection = glm::orthoLH(0.0f, viewport.Width, 0.0f, viewport.Height, 0.1f, 10.0f);
       deviceContext->Unmap(constantBuffer, 0);
-
 
       deviceContext->ClearRenderTargetView(frameBufferView, backgroundColor);
       deviceContext->ClearDepthStencilView(depthBufferView, D3D11_CLEAR_DEPTH, 1.0f, 0);
@@ -355,7 +369,7 @@ int main(int argc, char** args)
       deviceContext->PSSetSamplers(0, 1, &samplerState);
 
       deviceContext->OMSetRenderTargets(1, &frameBufferView, depthBufferView);
-      deviceContext->OMSetDepthStencilState(depthStencilState, 0);
+      //deviceContext->OMSetDepthStencilState(depthStencilState, 0);
       deviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff); // use default blend mode (i.e. disable)
 
       deviceContext->DrawIndexed(ARRAYSIZE(IndexData), 0, 0);
