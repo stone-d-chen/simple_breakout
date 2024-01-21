@@ -204,24 +204,7 @@ int main(int argc, char** args)
    device->CreateTexture2D(&depthBufferDesc, nullptr, &depthBuffer);
    device->CreateDepthStencilView(depthBuffer, nullptr, &depthBufferView);
 
-#if 0
-   D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = // float3 position, float3 normal, float2 texcoord, float3 color
-   {
-       { "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,                            0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-       { "NOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-       { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-       { "COL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-   };
 
-   ID3D11VertexShader* vertexShader;
-   ID3D11PixelShader* pixelShader;
-   ID3D11InputLayout* inputLayout;
-   ParseAndCreateShaders(
-      L"shaders.hlsl",
-      &vertexShader, &pixelShader,
-      &inputLayout, inputElementDesc, ARRAYSIZE(inputElementDesc),
-      device);
-#else 
    D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = // float3 position, float3 normal, float2 texcoord, float3 color
    {
        { "POS", 0, DXGI_FORMAT_R32G32_FLOAT, 0,                            0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -235,7 +218,6 @@ int main(int argc, char** args)
       &vertexShader, &pixelShader,
       &inputLayout, inputElementDesc, ARRAYSIZE(inputElementDesc),
       device);
-#endif
    
    D3D11_RASTERIZER_DESC1 rasterizerDesc = {};
    rasterizerDesc.FillMode = D3D11_FILL_SOLID;
