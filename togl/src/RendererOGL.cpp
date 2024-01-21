@@ -1,5 +1,7 @@
 #include <glad/glad.h>
 
+#include "RendererOGL.h"
+
 void GetOpenGLInfo()
 {
 	std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
@@ -28,7 +30,6 @@ void initSDLOpenGLBinding()
 	GetOpenGLInfo();
 }
 
-
 SDL_Window* initSDLOpenGLWindow(const char* WindowName, int Width, int Height)
 {
 	SDL_Init(SDL_INIT_VIDEO);
@@ -46,8 +47,42 @@ SDL_Window* initWindowing(const char* WindowName, int Width, int Height)
 {
 	SDL_Window* Window = initSDLOpenGLWindow(WindowName, Width, Height);
 	initSDLOpenGLBinding();
-
 	return Window;
+}
+
+static ShaderProgramSource ParseShader(const std::string& filepath)
+{
+	std::ifstream stream(filepath);
+	std::string line;
+	std::stringstream ss[2];
+
+	enum class ShaderType
+	{
+		NONE = -1, VERTEX = 0, FRAGMENT = 1
+	};
+
+	ShaderType type = ShaderType::NONE;
+
+	while (getline(stream, line))
+	{
+		if (line.find("#shader") != std::string::npos)
+		{
+			if (line.find("vertex") != std::string::npos)
+			{
+				type = ShaderType::VERTEX;
+			}
+			else if (line.find("fragment") != std::string::npos)
+			{
+				type = ShaderType::FRAGMENT;
+			}
+		}
+		else
+		{
+			ss[(int)type] << line << '\n';
+		}
+	}
+
+	return { ss[0].str(), ss[1].str() };
 }
 
 unsigned int CreateShaderProgram(const ShaderProgramSource& source)
@@ -204,4 +239,10 @@ void Clear(glm::vec4 color)
 {
 	glClearColor(color.r, color.g, color.b, color.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void PlatformClear(void)
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	return;
 }

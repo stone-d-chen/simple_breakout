@@ -23,48 +23,6 @@
 
 #include "RendererOGL.cpp"
 
-
-static ShaderProgramSource ParseShader(const std::string& filepath)
-{
-	std::ifstream stream(filepath);
-	std::string line;
-	std::stringstream ss[2];
-
-	enum class ShaderType
-	{
-		NONE = -1, VERTEX = 0, FRAGMENT = 1
-	};
-
-	ShaderType type = ShaderType::NONE;
-
-	while (getline(stream, line))
-	{
-		if (line.find("#shader") != std::string::npos)
-		{
-			if (line.find("vertex") != std::string::npos)
-			{
-				type = ShaderType::VERTEX;
-			}
-			else if (line.find("fragment") != std::string::npos)
-			{
-				type = ShaderType::FRAGMENT;
-			}
-		}
-		else
-		{
-			ss[(int)type] << line << '\n';
-		}
-	}
-
-	return { ss[0].str(), ss[1].str() };
-}
-
-void PlatformClear(void)
-{
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	return;
-}
-
 bool UpdateInputState(InputState& inputstate)
 {
 	SDL_Event e;
@@ -182,7 +140,6 @@ void* PlatformLoadFont(const char* filename, unsigned int pts)
 	return (void*)font;
 }
 
-
 int main(int argc, char** args)
 {
 	std::srand(1231412);
@@ -190,7 +147,6 @@ int main(int argc, char** args)
 	unsigned int windowWidth = 960;
 	unsigned int windowHeight = 720;
 	SDL_Window* Window = initWindowing(	"Breakout", windowWidth, windowHeight);
-
 
 	// audio
 	initSDLMixerAudio();
@@ -322,8 +278,6 @@ int main(int argc, char** args)
 			asteroid.pos += glm::normalize(asteroid.dir) * asteroid.speed * (float) deltaTime;
 			DrawQuad(asteroid.dim, asteroid.pos, 0, { 2.0f, 1.0f, 2.0f, 1.0f }, textureId, oglFlipContext);
 		}
-
-
 
 
 		static float rotationAngle = 0.0;
