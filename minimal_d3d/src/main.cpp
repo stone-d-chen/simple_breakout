@@ -270,13 +270,7 @@ int main(int argc, char** args)
    
    /// VERTEX BUFFER
    /// Index
-#if 0
-   D3D11_BUFFER_DESC vertexBufferDesc = {};
-   vertexBufferDesc.ByteWidth = sizeof(VertexData);
-   vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-   vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-   D3D11_SUBRESOURCE_DATA vertexData = { VertexData };
-#else
+
    float Vdata[] = {   0.0,  0.0, 0.0, 0.0,
                        1.0,  0.0, 0.0, 1.0,
                        1.0,  1.0, 1.0, 1.0,
@@ -286,24 +280,17 @@ int main(int argc, char** args)
    vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
    D3D11_SUBRESOURCE_DATA vertexData = { Vdata };
-#endif
+
    ID3D11Buffer* vertexBuffer;
    device->CreateBuffer(&vertexBufferDesc, &vertexData, &vertexBuffer);
  
-#if 0
-   D3D11_BUFFER_DESC indexBufferDesc = {};
-   indexBufferDesc.ByteWidth         = sizeof(IndexData);
-   indexBufferDesc.Usage             = D3D11_USAGE_IMMUTABLE;
-   indexBufferDesc.BindFlags         = D3D11_BIND_INDEX_BUFFER;
-   D3D11_SUBRESOURCE_DATA indexData  = { IndexData };
-#else
    unsigned int iData[] = { 0, 2, 1, 0, 3, 2 };
    D3D11_BUFFER_DESC indexBufferDesc = {};
    indexBufferDesc.ByteWidth = sizeof(iData);
    indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
    indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
    D3D11_SUBRESOURCE_DATA indexData = {iData};
-#endif
+
    ID3D11Buffer* indexBuffer;
    device->CreateBuffer(&indexBufferDesc, &indexData, &indexBuffer);
 
@@ -320,9 +307,6 @@ int main(int argc, char** args)
    D3D11_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(depthBufferDesc.Width), static_cast<float>(depthBufferDesc.Height), 0.0f, 1.0f };
    float w = viewport.Width / viewport.Height; float h = 1.0f; float n = 1.f; float f = 10.0f;
 
-   float3 modelRotation = { 0.0f, 0.0f, 0.0f };
-   float3 modelScale = { 400.0f, 200.0f, 0.0f };       // half  I have no idea why
-   float3 modelTranslation = { 100.0f, 100.0f, 0.0f }; // centr I have no idea why
 
    deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
    deviceContext->IASetInputLayout(inputLayout);
@@ -341,18 +325,22 @@ int main(int argc, char** args)
    deviceContext->OMSetRenderTargets(1, &frameBufferView, depthBufferView);
    //deviceContext->OMSetDepthStencilState(depthStencilState, 0);
    deviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff); // use default blend mode (i.e. disable)
-
    
    const uint8_t* keys = SDL_GetKeyboardState(nullptr);
    float speed = 10;
+
+   float3 modelRotation = { 0.0f, 0.0f, 0.0f };
+   float3 modelScale = { 400.0f, 200.0f, 0.0f };
+   float3 modelTranslation = { 100.0f, 100.0f, 0.0f };
+
    while (true)
    {
       SDL_PumpEvents();
       if (keys[SDL_SCANCODE_ESCAPE]) break;
-      else if (keys[SDL_SCANCODE_UP]) modelTranslation.y    += speed;
-      else if (keys[SDL_SCANCODE_DOWN]) modelTranslation.y  -= speed;
-      else if (keys[SDL_SCANCODE_RIGHT]) modelTranslation.x += speed;
-      else if (keys[SDL_SCANCODE_LEFT]) modelTranslation.x  -= speed;
+      if (keys[SDL_SCANCODE_UP]) modelTranslation.y    += speed;
+      if (keys[SDL_SCANCODE_DOWN]) modelTranslation.y  -= speed;
+      if (keys[SDL_SCANCODE_RIGHT]) modelTranslation.x += speed;
+      if (keys[SDL_SCANCODE_LEFT]) modelTranslation.x  -= speed;
 
       glm::mat4 model(1.0f);
       auto scale     = glm::scale(model, glm::vec3(modelScale.x, modelScale.y, modelScale.z) );
@@ -368,24 +356,7 @@ int main(int argc, char** args)
       deviceContext->ClearRenderTargetView(frameBufferView, backgroundColor);
       deviceContext->ClearDepthStencilView(depthBufferView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-      //deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-      //deviceContext->IASetInputLayout(inputLayout);
-      //deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
-      //deviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-      // deviceContext->VSSetShader(vertexShader, nullptr, 0);
       deviceContext->VSSetConstantBuffers(0, 1, &constantBuffer);
-
-      // deviceContext->RSSetViewports(1, &viewport);
-      // deviceContext->RSSetState(rasterizerState);
-
-      // deviceContext->PSSetShader(pixelShader, nullptr, 0);
-      // deviceContext->PSSetShaderResources(0, 1, &textureView);
-      // deviceContext->PSSetSamplers(0, 1, &samplerState);
-
-      // deviceContext->OMSetRenderTargets(1, &frameBufferView, depthBufferView);
-      // deviceContext->OMSetDepthStencilState(depthStencilState, 0);
-      // deviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff); // use default blend mode (i.e. disable)
 
       deviceContext->DrawIndexed(ARRAYSIZE(IndexData), 0, 0);
 
