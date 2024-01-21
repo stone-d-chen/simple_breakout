@@ -144,12 +144,13 @@ void ParseAndCreateShaders(
 
 ID3D11Texture2D* CreateTexture(ID3D11Device1* device, const char* filename, DXGI_FORMAT format)
 {
+   filename = "C:/repos/togl/togl/res/textures/paddle.png";
    int width, height, nrChannels;
    unsigned char* image = stbi_load(filename, &width, &height, &nrChannels, 0);
 
    D3D11_TEXTURE2D_DESC textureDesc = {};
-   textureDesc.Width = TEXTURE_WIDTH;  // in xdata.h
-   textureDesc.Height = TEXTURE_HEIGHT; // in xdata.h
+   textureDesc.Width = width;  // in xdata.h
+   textureDesc.Height = height; // in xdata.h
    textureDesc.MipLevels = 1;
    textureDesc.ArraySize = 1;
    textureDesc.Format = format;
@@ -158,8 +159,8 @@ ID3D11Texture2D* CreateTexture(ID3D11Device1* device, const char* filename, DXGI
    textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
    D3D11_SUBRESOURCE_DATA textureData = {};
-   textureData.pSysMem = TextureData;
-   textureData.SysMemPitch = TEXTURE_WIDTH * sizeof(UINT); // 4 bytes per pixel
+   textureData.pSysMem = image;
+   textureData.SysMemPitch = width * sizeof(UINT); // 4 bytes per pixel
 
    ID3D11Texture2D* texture;
    device->CreateTexture2D(&textureDesc, &textureData, &texture);
