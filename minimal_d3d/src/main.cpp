@@ -324,29 +324,43 @@ int main(int argc, char** args)
    float3 modelScale = { 400.0f, 200.0f, 0.0f };       // half  I have no idea why
    float3 modelTranslation = { 100.0f, 100.0f, 0.0f }; // centr I have no idea why
 
+   deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+   deviceContext->IASetInputLayout(inputLayout);
+   deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+   deviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
+   deviceContext->VSSetShader(vertexShader, nullptr, 0);
+
+   deviceContext->RSSetViewports(1, &viewport);
+   deviceContext->RSSetState(rasterizerState);
+   
+   deviceContext->PSSetShader(pixelShader, nullptr, 0);
+   deviceContext->PSSetShaderResources(0, 1, &textureView);
+   deviceContext->PSSetSamplers(0, 1, &samplerState);
+
+   deviceContext->OMSetRenderTargets(1, &frameBufferView, depthBufferView);
+   //deviceContext->OMSetDepthStencilState(depthStencilState, 0);
+   deviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff); // use default blend mode (i.e. disable)
+
+   
    const uint8_t* keys = SDL_GetKeyboardState(nullptr);
+   float speed = 10;
    while (true)
    {
       SDL_PumpEvents();
-      if (keys[SDL_SCANCODE_ESCAPE])
-         break;
+      if (keys[SDL_SCANCODE_ESCAPE]) break;
+      else if (keys[SDL_SCANCODE_UP]) modelTranslation.y    += speed;
+      else if (keys[SDL_SCANCODE_DOWN]) modelTranslation.y  -= speed;
+      else if (keys[SDL_SCANCODE_RIGHT]) modelTranslation.x += speed;
+      else if (keys[SDL_SCANCODE_LEFT]) modelTranslation.x  -= speed;
 
       glm::mat4 model(1.0f);
-     // auto rotateX = glm::rotate(model, modelRotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
-     // auto rotateY = glm::rotate(model, modelRotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-     // auto rotateZ = glm::rotate(model, modelRotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
-      // auto scale     = glm::scale(model, glm::vec3(modelScale.x, modelScale.y, modelScale.z) / 4.0f);
       auto scale     = glm::scale(model, glm::vec3(modelScale.x, modelScale.y, modelScale.z) );
-
       auto translate = glm::translate(model, glm::vec3(modelTranslation.x, modelTranslation.y, modelTranslation.z));
-      modelRotation.x += 0.005f;
-      modelRotation.y += 0.009f;
-      modelRotation.z += 0.001f;
 
       D3D11_MAPPED_SUBRESOURCE mappedSubresource;
       deviceContext->Map(constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
       Constants* constants = reinterpret_cast<Constants*>(mappedSubresource.pData);
-      //constants->Transform = translate * rotateX * rotateY * rotateZ * scale;
       constants->Transform =  translate * scale * glm::mat4(1.0f);
       constants->Projection = glm::orthoLH(0.0f, viewport.Width, 0.0f, viewport.Height, 0.1f, 10.0f);
       deviceContext->Unmap(constantBuffer, 0);
@@ -354,24 +368,24 @@ int main(int argc, char** args)
       deviceContext->ClearRenderTargetView(frameBufferView, backgroundColor);
       deviceContext->ClearDepthStencilView(depthBufferView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-      deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-      deviceContext->IASetInputLayout(inputLayout);
-      deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
-      deviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+      //deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+      //deviceContext->IASetInputLayout(inputLayout);
+      //deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+      //deviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
-      deviceContext->VSSetShader(vertexShader, nullptr, 0);
+      // deviceContext->VSSetShader(vertexShader, nullptr, 0);
       deviceContext->VSSetConstantBuffers(0, 1, &constantBuffer);
 
-      deviceContext->RSSetViewports(1, &viewport);
-      deviceContext->RSSetState(rasterizerState);
+      // deviceContext->RSSetViewports(1, &viewport);
+      // deviceContext->RSSetState(rasterizerState);
 
-      deviceContext->PSSetShader(pixelShader, nullptr, 0);
-      deviceContext->PSSetShaderResources(0, 1, &textureView);
-      deviceContext->PSSetSamplers(0, 1, &samplerState);
+      // deviceContext->PSSetShader(pixelShader, nullptr, 0);
+      // deviceContext->PSSetShaderResources(0, 1, &textureView);
+      // deviceContext->PSSetSamplers(0, 1, &samplerState);
 
-      deviceContext->OMSetRenderTargets(1, &frameBufferView, depthBufferView);
-      //deviceContext->OMSetDepthStencilState(depthStencilState, 0);
-      deviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff); // use default blend mode (i.e. disable)
+      // deviceContext->OMSetRenderTargets(1, &frameBufferView, depthBufferView);
+      // deviceContext->OMSetDepthStencilState(depthStencilState, 0);
+      // deviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff); // use default blend mode (i.e. disable)
 
       deviceContext->DrawIndexed(ARRAYSIZE(IndexData), 0, 0);
 
