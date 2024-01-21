@@ -1,3 +1,5 @@
+#include <glad/glad.h>
+
 void GetOpenGLInfo()
 {
 	std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
@@ -8,7 +10,6 @@ void GetOpenGLInfo()
 	SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &MajorVersion);
 	std::cout << "GET: " << MajorVersion << std::endl;
 }
-
 
 void initSDLOpenGLBinding()
 {
@@ -156,7 +157,8 @@ TextTextureInfo CreateTextTexture(std::string text, TTF_Font* font)
 	return fonttexture;
 }
 
-void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition, float rotateRadians, const glm::vec4 Color, unsigned int texture,
+void DrawQuad(const glm::vec2& pixelDimensions, const glm::vec2& pixelPosition,
+	float rotateRadians, const glm::vec4 Color, unsigned int texture,
 	unsigned int Vao, unsigned int modelLoc, unsigned int colorLoc)
 {
 	glm::mat4 model = glm::mat4(1.0);

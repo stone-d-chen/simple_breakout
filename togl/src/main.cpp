@@ -5,14 +5,14 @@
 #include <sstream>
 #include <vector>
 
-#include <glad/glad.h>
 #include "breakout.cpp"
 #include <SDL.h>
 #include <SDL_ttf.h>
-
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
+#include <gtx/matrix_transform_2d.hpp>
+
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -189,7 +189,8 @@ int main(int argc, char** args)
 	// window 
 	unsigned int windowWidth = 960;
 	unsigned int windowHeight = 720;
-	SDL_Window* Window = initWindowing("Breakout", windowWidth, windowHeight);
+	SDL_Window* Window = initWindowing(	"Breakout", windowWidth, windowHeight);
+
 
 	// audio
 	initSDLMixerAudio();
@@ -202,12 +203,12 @@ int main(int argc, char** args)
 
 	// Font Init
 	TTF_Init();
-	// TTF_Font* debugfont = TTF_OpenFont("res/fonts/Urbanist-Medium.ttf", 64);
+	TTF_Font* debugfont = TTF_OpenFont("res/fonts/Urbanist-Medium.ttf", 64);
 
+	/// Framebuffer
 	unsigned int Fbo;
 	glGenFramebuffers(1, &Fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-
 	// texture binding
 	unsigned int texture;
 	glGenTextures(1, &texture);
@@ -218,7 +219,6 @@ int main(int argc, char** args)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindTexture(GL_TEXTURE_2D, 0);
-
 	// binding the above texture 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -247,7 +247,13 @@ int main(int argc, char** args)
 
 	// GLOBAL PROJECTION
 	int projLoc = glGetUniformLocation(shaderProgram, "projection");
-	glm::mat4 projection = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight, -1.0f, 1.0f);
+
+	/// need to pass the platform layer a concept of world dimension
+	unsigned int WorldWidth = 800;
+	unsigned int WorldHeight = 600;
+	glm::mat4 projection = glm::ortho(0.0f, (float)WorldWidth, 0.0f, (float)WorldHeight, -1.0f, 1.0f);
+
+	//glm::mat4 projection = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight, -1.0f, 1.0f);
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 	// MODEL
@@ -257,6 +263,30 @@ int main(int argc, char** args)
 	GameState gameState = initGameState();
 
 	uint64_t LAST = SDL_GetPerformanceCounter();
+
+	glm::vec2 playerPosition = { 300, 300 };
+	glm::vec2 playerDimension = { 20.f , 20.f };
+	struct bullet
+	{
+		glm::vec2 dim;
+		glm::vec2 pos;
+		glm::vec2 dir;
+		float speed = 0.7;
+	};
+
+	struct asteroid
+	{
+		glm::vec2 dim;
+		glm::vec2 pos;
+		glm::vec2 dir;
+		float speed = 0.2;
+	};
+
+	std::vector<bullet> bullets;
+	std::vector<asteroid> asteroids;
+	unsigned int textureId = CreateTexture("res/textures/paddle.png", GL_RGBA);
+	unsigned int notextId = CreateTexture("res/textures/ship.png", GL_RGBA);
+
 	while (gameState.running)
 	{
 		uint64_t NOW = SDL_GetPerformanceCounter();
@@ -269,18 +299,133 @@ int main(int argc, char** args)
 		glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
 		glDisable(GL_DEPTH_TEST);
 		glClear(GL_COLOR_BUFFER_BIT);
-		
-		/////////////////////////// GAME UPDATE & Render ////////////////////////////
+#if 1
+		WorldWidth = 800;
+		WorldHeight = 600;
+
+
+		static int only1 = 0;
+		if (!only1)
+		{
+			asteroid basicasteroid = {};
+			basicasteroid.dim = { 50.0f, 50.f };
+			basicasteroid.pos = { 0.0f, 0.f };
+			basicasteroid.dir = { 800, 600 };
+			
+			asteroids.push_back(basicasteroid);
+
+			only1 = 1;
+		}
+
+		for (auto& asteroid : asteroids)
+		{
+			asteroid.pos += glm::normalize(asteroid.dir) * asteroid.speed * (float) deltaTime;
+			DrawQuad(asteroid.dim, asteroid.pos, 0, { 2.0f, 1.0f, 2.0f, 1.0f }, textureId, oglFlipContext);
+		}
+
+
+
+
+		static float rotationAngle = 0.0;
+		static float playerInertia = 0.0f;
+		float rotationVelocity = 0.004;
+		float playerSpeed = 0.00015;
+
+		glm::vec2 orientation = { 0.0f, 1.0f };
+		static glm::vec2 inertiaVector = { 0.0f, 0.0f };
+		glm::mat3 rotation = glm::rotate(glm::mat3(1.0f), rotationAngle);
+		orientation = glm::normalize(rotation * glm::vec3(orientation, 0.0f));
+		float rotDeg = atan2f(orientation.y, orientation.x) * 180.f / 3.14;
+		printf("xdir: %f, ydir: %f, rotDeg: %f\r", orientation.x, orientation.y, rotDeg);
+
+		if (gameState.inputState.right)
+		{
+			rotationAngle -= rotationVelocity * deltaTime;
+		}
+		if (gameState.inputState.left)
+		{
+			rotationAngle += rotationVelocity * deltaTime;
+		}
+		if (gameState.inputState.up)
+		{
+			inertiaVector = (playerSpeed) / (playerSpeed + playerInertia) * orientation + (playerInertia) / (playerSpeed + playerInertia) * inertiaVector;
+			playerInertia += glm::dot(glm::normalize(orientation), glm::normalize(inertiaVector)) / 200.f;
+			if (playerInertia > 0.4)
+			{
+				playerInertia = 0.4;
+			}
+		}
+		if (playerInertia > 0.00032)
+		{
+			playerInertia -= 0.00030;
+		}
+		else
+		{
+			playerInertia = 0.f;
+		}
+
+		playerPosition += playerInertia * inertiaVector;
+
+		if (playerPosition.x > 790)
+		{
+			playerPosition.x -= 790;
+		}
+		if (playerPosition.y > 580)
+		{
+			playerPosition.y -= 580;
+		}
+		if (playerPosition.x < 10)
+		{
+			playerPosition.x += 790;
+		}
+		if (playerPosition.y < 10)
+		{
+			playerPosition.y += 580;
+		}
+		if (gameState.inputState.space && !(gameState.inputState.spaceProcessed))
+		{
+			// need a fire rate
+			bullet Bullet = {};
+			Bullet.dim = { 10.0f, 10.0f };
+			Bullet.pos = playerPosition;
+			Bullet.dir = orientation;
+			Bullet.speed += playerInertia;
+			bullets.push_back(Bullet);
+			gameState.inputState.spaceProcessed = true;
+		}
+		for (auto& bullet : bullets)
+		{
+			bullet.pos += bullet.speed * bullet.dir;
+		}
+
+
+		glm::vec4 playerColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+		//glm::rotate()
+
+		DrawQuad(playerDimension, playerPosition, rotDeg, playerColor, notextId, oglFlipContext);
+		for (auto& bullet : bullets)
+		{
+			float rotDeg = atan2f(bullet.dir.y, bullet.dir.x) * 180.f / 3.14;
+			DrawQuad(bullet.dim, bullet.pos, rotDeg, playerColor, notextId, oglFlipContext);
+		}
+
+
+#else
+		/////////////////////////// GAME UPDATE & Render ///////////////////////////
 		GameUpdateAndRender(gameState, gameState.inputState, RenderQueue, TextRenderQueue, AudioQueue, deltaTime);
 
 		// Sprite Render Queue
+		int drawcalls = 0;
 		for (QuadRenderData quadData : RenderQueue)
 		{
 			DrawQuad(quadData.pixelDimensions, quadData.pixelPosition, quadData.rotation, quadData.Color, quadData.textureId, oglFlipContext);
+			++drawcalls;
 		}
 		for (auto object : gameState.powerUps)
 		{
 			DrawQuad(object.dimension, object.position, 0, object.color, object.textureId, oglFlipContext);
+			++drawcalls;
 		}
 		RenderQueue.clear();
 
@@ -303,10 +448,11 @@ int main(int argc, char** args)
 		TextRenderQueue.clear();
 
 		/// debug draw string
-		// {
-		// 	std::string MS = "MS: " + std::to_string(deltaTime);
-		// 	DebugDrawString({ 0.0, 0.0 }, MS, debugfont, oglFlipContext);
-		// }
+		{
+			std::string MS = "MS: " + std::to_string(deltaTime);
+			DebugDrawString({ 0.0, 0.0 }, MS, debugfont, oglFlipContext);
+			DebugDrawString({ 0.0, 64.0 }, std::to_string(drawcalls), debugfont, oglFlipContext);
+		}
 
 		// Audio "Queue"
 		for (void* sound : AudioQueue)
@@ -315,7 +461,7 @@ int main(int argc, char** args)
 		}
 		AudioQueue.clear();
 	
-
+#endif
 		glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
 		glDisable(GL_DEPTH_TEST);
 		DrawQuad({ windowWidth, windowHeight}, { 0, 0 }, 0, { 1.0f, 1.0f, 1.0f, 1.0f }, texture, oglContext);
