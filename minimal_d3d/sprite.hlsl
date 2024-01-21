@@ -2,7 +2,6 @@ cbuffer constants : register(b0)
 {
    row_major float4x4 transform;
    row_major float4x4 projection;
-   float4 color;
 }
 
 struct vs_in

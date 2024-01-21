@@ -2,6 +2,7 @@
 #pragma comment(lib, "d3d11")
 #pragma comment(lib, "d3dcompiler")
 
+
 #include <windows.h>
 #include <d3d11_1.h>
 #include <d3dcompiler.h>
@@ -16,8 +17,17 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 
+// constants are uniforms basically?
+struct Constants
+{
+   glm::mat4 Transform;
+   glm::mat4 Projection;
+};
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+
+#include "C:/repos/togl/togl/src/RendererD3D11.cpp"
 
 struct float3 { float x, y, z; };
 
@@ -234,13 +244,8 @@ int main(int argc, char** args)
    ID3D11DepthStencilState* depthStencilState;
    device->CreateDepthStencilState(&depthStencilDesc, &depthStencilState);
 
-   // constants are uniforms basically?
-   struct Constants
-   {
-      glm::mat4 Transform;
-      glm::mat4 Projection;
-      float3 LightVector;
-   };
+
+
    // round constant buffer size to 16 byte boundary
    D3D11_BUFFER_DESC constantBufferDesc = {};
    constantBufferDesc.ByteWidth      = sizeof(Constants) + 0xf & 0xfffffff0;
@@ -296,6 +301,7 @@ int main(int argc, char** args)
    deviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
    deviceContext->VSSetShader(vertexShader, nullptr, 0);
+   deviceContext->VSSetConstantBuffers(0, 1, &constantBuffer);
 
    deviceContext->RSSetViewports(1, &viewport);
    deviceContext->RSSetState(rasterizerState);
@@ -315,6 +321,12 @@ int main(int argc, char** args)
    float3 modelScale = { 400.0f, 200.0f, 0.0f };
    float3 modelTranslation = { 100.0f, 100.0f, 0.0f };
 
+   D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+   deviceContext->Map(constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
+   Constants* constants = reinterpret_cast<Constants*>(mappedSubresource.pData);
+   constants->Projection = glm::orthoLH(0.0f, viewport.Width, 0.0f, viewport.Height, 0.1f, 10.0f);
+   deviceContext->Unmap(constantBuffer, 0);
+
    while (true)
    {
       SDL_PumpEvents();
@@ -324,23 +336,16 @@ int main(int argc, char** args)
       if (keys[SDL_SCANCODE_RIGHT]) modelTranslation.x += speed;
       if (keys[SDL_SCANCODE_LEFT]) modelTranslation.x  -= speed;
 
-      glm::mat4 model(1.0f);
-      auto scale     = glm::scale(model, glm::vec3(modelScale.x, modelScale.y, modelScale.z) );
-      auto translate = glm::translate(model, glm::vec3(modelTranslation.x, modelTranslation.y, modelTranslation.z));
-
-      D3D11_MAPPED_SUBRESOURCE mappedSubresource;
-      deviceContext->Map(constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
-      Constants* constants = reinterpret_cast<Constants*>(mappedSubresource.pData);
-      constants->Transform =  translate * scale * glm::mat4(1.0f);
-      constants->Projection = glm::orthoLH(0.0f, viewport.Width, 0.0f, viewport.Height, 0.1f, 10.0f);
-      deviceContext->Unmap(constantBuffer, 0);
-
       deviceContext->ClearRenderTargetView(frameBufferView, backgroundColor);
       deviceContext->ClearDepthStencilView(depthBufferView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-      deviceContext->VSSetConstantBuffers(0, 1, &constantBuffer);
+      Context myContext =
+      {
+         deviceContext, viewport, constantBuffer,
+      };
 
-      deviceContext->DrawIndexed(ARRAYSIZE(IndexData), 0, 0);
+      DrawQuad({ modelScale.x, modelScale.y }, { modelTranslation.x, modelTranslation.y }, 0, {}, myContext);
+
 
       swapChain->Present(1, 0);
    }
