@@ -113,6 +113,25 @@ unsigned int CreateShaderProgram(const ShaderProgramSource& source)
 	return shaderProgram;
 }
 
+void CreateFramebufferAndTexture(unsigned int* Fbo, unsigned int* texture, int width, int height)
+{
+	glGenFramebuffers(1, Fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, *Fbo);
+	// texture binding
+	glGenTextures(1, texture);
+	glBindTexture(GL_TEXTURE_2D, *texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	// binding the above texture 
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *texture, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+}
+
 unsigned int CreateVao(float* Vertices, size_t VertexArraySize, unsigned int* Indices, size_t IndexArraySize)
 {
 	unsigned int Vao;
@@ -245,4 +264,16 @@ void PlatformClear(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	return;
+}
+
+void StartFramebuffer(unsigned int Fbo)
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
+	glDisable(GL_DEPTH_TEST);
+	glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void EndFramebuffer(unsigned int Fbo)
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
 }
